@@ -1,0 +1,14 @@
+fn sum(left: number, right: number) -> number {
+	left + right
+}
+
+fn print(text: string) -> () {}
+fn num_to_string(num: number) -> string {
+	""
+}
+
+fn main(){
+	print("hello");
+	let text = num_to_string(sum(1, 2));
+	print(text);
+}
