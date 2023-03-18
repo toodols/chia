@@ -9,8 +9,13 @@ fn num_to_string(num: number) -> string {
 	return "abc";
 }
 
+
 fn main(){
 	print("hello");
 	let text = num_to_string(sum(1, 2));
-	print(text);
+	let a = if text == "3" {
+		1==2 + 1		
+	} else {
+		2==2
+	};
 }

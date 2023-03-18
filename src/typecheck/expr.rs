@@ -1,9 +1,9 @@
 use crate::parser::ast::{BinaryOperation, BinaryOperator, Expression, Literal};
 
-use super::{CompilerError, CompilerResult, Context, State, Type, TypecheckOutput};
+use super::{CompilerError, CompilerResult, Context, State, Type, TypecheckOutput, typecheck_block};
 
 pub fn typecheck_expression<'nodes, 'ctx>(
-    mut ctx: &'ctx mut Context<'nodes>,
+    ctx: &'ctx mut Context<'nodes>,
     state: State,
     expr: &'nodes Expression,
 ) -> CompilerResult<TypecheckOutput> {
@@ -16,18 +16,21 @@ pub fn typecheck_expression<'nodes, 'ctx>(
             .get_variable(state.scope, name.clone())
             .map(|t| t.into())
             .ok_or(CompilerError::VariableNotFound(name.clone())),
-        Expression::BinaryOperation(
-            op @ BinaryOperation {
-                operator: BinaryOperator::Add,
-                ..
-            },
-        ) => {
+        Expression::BinaryOperation(op) => {
             let TypecheckOutput { ty: left_ty, .. } =
                 typecheck_expression(ctx, state.clone(), &op.left)?;
             let TypecheckOutput { ty: right_ty, .. } = typecheck_expression(ctx, state, &op.right)?;
-            match (left_ty, right_ty) {
-                (Type::Number, Type::Number) => Ok(Type::Number.into()),
-                _ => Err(CompilerError::Unknown),
+            match op {
+                BinaryOperation{operator: BinaryOperator::Add, ..} => match (left_ty, right_ty) {
+                    (Type::Number, Type::Number) => Ok(Type::Number.into()),
+                    _ => Err(CompilerError::Unknown),
+                }
+                BinaryOperation{operator: BinaryOperator::Equal, ..} => if left_ty==right_ty {
+                    Ok(Type::Boolean.into())
+                } else {
+                    Err(CompilerError::AnyError(format!("Cannot compare {left_ty:?} and {right_ty:?}")))
+                },
+                _=> panic!("unimplemented"),
             }
         }
         Expression::FunctionCall(fn_call) => {
@@ -73,6 +76,36 @@ pub fn typecheck_expression<'nodes, 'ctx>(
                 }
             } else {
                 Err(CompilerError::AnyError(format!("Return is not expected")))
+            }
+        }
+        Expression::Block(block) => {
+            typecheck_block(ctx, state, block)
+        }
+        Expression::IfExpression(expr) => {
+            let TypecheckOutput { ty, exits } =
+                typecheck_expression(ctx, state.clone(), expr.condition.as_ref())?;
+            if ty != Type::Boolean {
+                return Err(CompilerError::MismatchedTypes(format!(
+                    "expected Boolean, got {:?}",
+                    ty
+                )));
+            }
+            let TypecheckOutput { ty: then_ty, exits: then_exits } =
+                typecheck_expression(ctx, state.clone(), expr.body.as_ref())?;
+            let TypecheckOutput { ty: else_ty, exits: else_exits } = match &expr.else_body {
+                Some(else_body) => typecheck_expression(ctx, state.clone(), else_body.as_ref())?,
+                None => Type::Unit.into(),
+            };
+            if then_ty == else_ty {
+                Ok(TypecheckOutput {
+                    ty: then_ty,
+                    exits: then_exits && else_exits,
+                })
+            } else {
+                Err(CompilerError::MismatchedTypes(format!(
+                    "if-then-else branches have different types: {:?} and {:?}",
+                    then_ty, else_ty
+                )))
             }
         }
         _ => panic!("Not implemented for {:?}", expr),

@@ -13,10 +13,16 @@ fn a() -> number {
  */
 
 pub fn typecheck_block<'nodes, 'ctx>(
-    mut ctx: &'ctx mut Context<'nodes>,
+    ctx: &'ctx mut Context<'nodes>,
     state: State,
     block: &'nodes Block,
 ) -> CompilerResult<TypecheckOutput> {
+    // insert block scope into symbol table
+    ctx.symtab.parents.insert(block.node_id, state.scope);
+    let state = State {
+        scope: block.node_id,
+        ..state
+    };
     let mut ty = Type::Unit;
     let mut exits = false;
     for stmt in block.statements.iter() {

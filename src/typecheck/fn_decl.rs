@@ -7,23 +7,22 @@ pub fn typecheck_function_declaration<'a, 'ctx>(
     state: State,
     function: &'a FunctionDeclaration,
 ) -> CompilerResult<&'ctx mut Context<'a>> {
-    let parent_scope = state.scope;
-    let scope = function.body.node_id;
-    ctx.symtab.parents.insert(scope, parent_scope);
+    let scope = state.scope;
+    let body_scope = function.body.node_id;
+    ctx.symtab.parents.insert(body_scope, scope);
     for (name, type_expr) in function.parameters.iter() {
         ctx.symtab.variables.insert(
             Symbol {
                 name: name.clone(),
-                scope,
+                scope: body_scope,
             },
             (
-                ctx.symtab.get_type(parent_scope, type_expr),
+                ctx.symtab.get_type(scope, type_expr),
                 NodeRef::FunctionDeclaration(function),
             ),
         );
     }
-    let return_type = ctx.symtab.get_type(parent_scope, &function.return_type);
-
+    let return_type = ctx.symtab.get_type(scope, &function.return_type);
     let block_output = typecheck_block(
         ctx,
         State {

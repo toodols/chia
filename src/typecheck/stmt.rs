@@ -6,7 +6,7 @@ use super::{
 };
 
 pub fn typecheck_statement<'nodes, 'ctx>(
-    mut ctx: &'ctx mut Context<'nodes>,
+    ctx: &'ctx mut Context<'nodes>,
     state: State,
     stmt: &'nodes Statement,
 ) -> CompilerResult<TypecheckOutput> {

@@ -1,0 +1,197 @@
+Program {
+    functions: [
+        FunctionDeclaration {
+            name: "sum",
+            parameters: [
+                (
+                    "left",
+                    Identifier(
+                        "number",
+                    ),
+                ),
+                (
+                    "right",
+                    Identifier(
+                        "number",
+                    ),
+                ),
+            ],
+            body: Block {
+                statements: [
+                    Expression(
+                        BinaryOperation {
+                            operator: Add,
+                            left: Identifier(
+                                "left",
+                            ),
+                            right: Identifier(
+                                "right",
+                            ),
+                        },
+                    ),
+                ],
+                does_return: true,
+                node_id: 1,
+            },
+            return_type: Identifier(
+                "number",
+            ),
+        },
+        FunctionDeclaration {
+            name: "print",
+            parameters: [
+                (
+                    "text",
+                    Identifier(
+                        "string",
+                    ),
+                ),
+            ],
+            body: Block {
+                statements: [],
+                does_return: false,
+                node_id: 2,
+            },
+            return_type: Unit,
+        },
+        FunctionDeclaration {
+            name: "num_to_string",
+            parameters: [
+                (
+                    "num",
+                    Identifier(
+                        "number",
+                    ),
+                ),
+            ],
+            body: Block {
+                statements: [
+                    Expression(
+                        Return(
+                            String(
+                                "abc",
+                            ),
+                        ),
+                    ),
+                ],
+                does_return: false,
+                node_id: 3,
+            },
+            return_type: Identifier(
+                "string",
+            ),
+        },
+        FunctionDeclaration {
+            name: "main",
+            parameters: [],
+            body: Block {
+                statements: [
+                    Expression(
+                        FunctionCall {
+                            value: Identifier(
+                                "print",
+                            ),
+                            arguments: [
+                                String(
+                                    "hello",
+                                ),
+                            ],
+                        },
+                    ),
+                    LetDeclaration(
+                        LetDeclaration {
+                            name: "text",
+                            value: Some(
+                                FunctionCall {
+                                    value: Identifier(
+                                        "num_to_string",
+                                    ),
+                                    arguments: [
+                                        FunctionCall {
+                                            value: Identifier(
+                                                "sum",
+                                            ),
+                                            arguments: [
+                                                Number(
+                                                    1,
+                                                ),
+                                                Number(
+                                                    2,
+                                                ),
+                                            ],
+                                        },
+                                    ],
+                                },
+                            ),
+                        },
+                    ),
+                    LetDeclaration(
+                        LetDeclaration {
+                            name: "a",
+                            value: Some(
+                                IfExpression {
+                                    condition: BinaryOperation {
+                                        operator: Equal,
+                                        left: Identifier(
+                                            "text",
+                                        ),
+                                        right: String(
+                                            "3",
+                                        ),
+                                    },
+                                    body: Block {
+                                        statements: [
+                                            Expression(
+                                                BinaryOperation {
+                                                    operator: Equal,
+                                                    left: Number(
+                                                        1,
+                                                    ),
+                                                    right: BinaryOperation {
+                                                        operator: Add,
+                                                        left: Number(
+                                                            2,
+                                                        ),
+                                                        right: Number(
+                                                            1,
+                                                        ),
+                                                    },
+                                                },
+                                            ),
+                                        ],
+                                        does_return: true,
+                                        node_id: 5,
+                                    },
+                                    else_body: Some(
+                                        Block {
+                                            statements: [
+                                                Expression(
+                                                    BinaryOperation {
+                                                        operator: Equal,
+                                                        left: Number(
+                                                            2,
+                                                        ),
+                                                        right: Number(
+                                                            2,
+                                                        ),
+                                                    },
+                                                ),
+                                            ],
+                                            does_return: true,
+                                            node_id: 6,
+                                        },
+                                    ),
+                                },
+                            ),
+                        },
+                    ),
+                    Empty,
+                ],
+                does_return: false,
+                node_id: 4,
+            },
+            return_type: Unit,
+        },
+    ],
+    node_id: 0,
+}
