@@ -196,7 +196,7 @@ impl std::fmt::Debug for Expression {
             Self::Literal(arg0) => arg0.fmt(f),
             Self::FunctionCall(arg0) => arg0.fmt(f),
             Self::IfExpression(arg0) => arg0.fmt(f),
-            Self::Return(arg0) => arg0.fmt(f),
+            ret_expr @ Self::Return(_) => ret_expr.fmt(f),
         }
     }
 }

@@ -4,7 +4,7 @@ fn sum(left: number, right: number) -> number {
 
 fn print(text: string) -> () {}
 fn num_to_string(num: number) -> string {
-	""
+	return "abc";
 }
 
 fn main(){
