@@ -9,9 +9,9 @@ pub fn typecheck_statement<'nodes, 'ctx>(
     mut ctx: &'ctx mut Context<'nodes>,
     state: State,
     stmt: &'nodes Statement,
-) -> CompilerResult<TypecheckOutput<'nodes, 'ctx>> {
+) -> CompilerResult<TypecheckOutput> {
     match stmt {
-        Statement::Empty => Ok((Type::Unit, ctx).into()),
+        Statement::Empty => Ok(Type::Unit.into()),
         Statement::Expression(expr) => typecheck_expression(ctx, state, expr),
         Statement::LetDeclaration(decl) => {
             let expr = match &decl.value {
@@ -22,7 +22,7 @@ pub fn typecheck_statement<'nodes, 'ctx>(
                 )))?,
             };
             let ty: Type;
-            TypecheckOutput { ty, ctx, .. } = typecheck_expression(ctx, state.clone(), expr)?;
+            TypecheckOutput { ty, .. } = typecheck_expression(ctx, state.clone(), expr)?;
             if ty == Type::Never {
                 Err(CompilerError::AnyError(format!(
                     "{} cannot be initialized to Never",
@@ -36,7 +36,7 @@ pub fn typecheck_statement<'nodes, 'ctx>(
             ctx.symtab
                 .variables
                 .insert(symbol, (ty, NodeRef::LetDeclaration(decl)));
-            Ok((Type::Never, ctx).into())
+            Ok(Type::Never.into())
         }
     }
 }

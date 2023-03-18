@@ -1,3 +1,5 @@
+// test code to make sure compiler works
+
 fn sum(left: number, right: number) -> number {
 	left + right
 }

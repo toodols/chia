@@ -16,7 +16,7 @@ pub fn typecheck_block<'nodes, 'ctx>(
     mut ctx: &'ctx mut Context<'nodes>,
     state: State,
     block: &'nodes Block,
-) -> CompilerResult<TypecheckOutput<'nodes, 'ctx>> {
+) -> CompilerResult<TypecheckOutput> {
     let mut ty = Type::Unit;
     let mut exits = false;
     for stmt in block.statements.iter() {
@@ -24,7 +24,7 @@ pub fn typecheck_block<'nodes, 'ctx>(
             println!("Warning: unreachable code");
             break;
         }
-        TypecheckOutput { ty, ctx, exits } = typecheck_statement(ctx, state.clone(), stmt)?;
+        TypecheckOutput { ty, exits } = typecheck_statement(ctx, state.clone(), stmt)?;
     }
     Ok(TypecheckOutput {
         ty: if exits {
@@ -35,6 +35,5 @@ pub fn typecheck_block<'nodes, 'ctx>(
             Type::Unit
         },
         exits,
-        ctx,
     })
 }

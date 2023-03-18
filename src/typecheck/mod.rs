@@ -130,18 +130,13 @@ pub enum CompilerError {
 type CompilerResult<T> = Result<T, CompilerError>;
 
 /// Generic typecheck output information
-pub struct TypecheckOutput<'nodes, 'ctx> {
+pub struct TypecheckOutput {
     pub ty: Type,
     pub exits: bool,
-    pub ctx: &'ctx mut Context<'nodes>,
 }
-impl<'nodes, 'ctx> From<(Type, &'ctx mut Context<'nodes>)> for TypecheckOutput<'nodes, 'ctx> {
-    fn from((ty, ctx): (Type, &'ctx mut Context<'nodes>)) -> Self {
-        Self {
-            ty,
-            ctx,
-            exits: false,
-        }
+impl From<Type> for TypecheckOutput {
+    fn from(ty: Type) -> Self {
+        Self { ty, exits: false }
     }
 }
 
