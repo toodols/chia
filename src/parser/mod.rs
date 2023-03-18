@@ -66,7 +66,6 @@ pub enum ParseError {
     Message(String),
 }
 
-
 struct Parser<'a> {
     node_id_counter: usize,
     tokens: Tokens<'a>,
@@ -212,7 +211,7 @@ impl<'a> Parser<'a> {
                 Token::Return => {
                     self.next_token();
                     Ok(Expression::Return(Box::new(self.parse_expression()?)))
-                },
+                }
                 Token::If => Ok(Expression::IfExpression(self.parse_if_expr()?)),
                 Token::Number
                 | Token::True
@@ -265,7 +264,9 @@ impl<'a> Parser<'a> {
                 let o_precedence = operators[op_index].precedence();
                 if n_precedence.1 < o_precedence.1 {
                     op_index = i;
-                } else if n_precedence == o_precedence && n_precedence.0 == Associativity::RightToLeft {
+                } else if n_precedence == o_precedence
+                    && n_precedence.0 == Associativity::RightToLeft
+                {
                     op_index = i;
                 }
             }
@@ -487,9 +488,7 @@ impl<'a> Parser<'a> {
         while let Some(token) = self.peek_token() {
             match token {
                 Token::Fn => {
-                    functions.push(
-                        self.parse_fn_declaration()?,
-                    );
+                    functions.push(self.parse_fn_declaration()?);
                 }
                 token => panic!("Expected function declaration but got {:?}", token),
             }
