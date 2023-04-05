@@ -1,12 +1,19 @@
 // since both branches returns,
 // the if expression would be never and the function does not need to return anything at the end
 fn if_never(val: boolean) -> number {
-	// a should be of type never
-	let a = if val {
+	// a should be of type never since both branches are never
+	let a = if val { // despite "returning" something, this block is still never
 		return 123;
 		1
 	} else {
 		return 456;
-		2
 	};
+}
+
+fn never_condition(){
+	if (return) {
+		1
+	} else {
+		2
+	}
 }

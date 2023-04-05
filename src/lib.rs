@@ -9,11 +9,3 @@ fn test() {
     println!("{:#?}", e);
     
 }
-
-fn condition_never() -> u32 {
-	if (return 1) {
-		1
-	} else {
-        2
-    }
-}

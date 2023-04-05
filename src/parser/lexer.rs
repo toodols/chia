@@ -124,6 +124,22 @@ pub enum Token {
 }
 
 impl Token {
+    pub fn is_expression_start(&self) -> bool {
+        matches!(
+            self,
+            Token::Identifier
+                | Token::Number
+                | Token::String
+                | Token::True
+                | Token::False
+                | Token::LParen
+                | Token::LBrace
+                | Token::LBracket
+                | Token::Not
+                | Token::Sub
+                | Token::Ref
+        )
+    }
     pub fn is_binary_operator(&self) -> bool {
         matches!(
             self,

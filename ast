@@ -48,13 +48,8 @@ Program {
                                                         ),
                                                     ),
                                                 ),
-                                                Expression(
-                                                    Number(
-                                                        2,
-                                                    ),
-                                                ),
                                             ],
-                                            does_return: true,
+                                            does_return: false,
                                             node_id: 3,
                                         },
                                     ),
@@ -72,16 +67,14 @@ Program {
             ),
         },
         FunctionDeclaration {
-            name: "condition_never",
+            name: "never_condition",
             parameters: [],
             body: Block {
                 statements: [
                     Expression(
                         IfExpression {
                             condition: Return(
-                                Number(
-                                    1,
-                                ),
+                                Unit,
                             ),
                             body: Block {
                                 statements: [
@@ -94,16 +87,26 @@ Program {
                                 does_return: true,
                                 node_id: 5,
                             },
-                            else_body: None,
+                            else_body: Some(
+                                Block {
+                                    statements: [
+                                        Expression(
+                                            Number(
+                                                2,
+                                            ),
+                                        ),
+                                    ],
+                                    does_return: true,
+                                    node_id: 6,
+                                },
+                            ),
                         },
                     ),
                 ],
                 does_return: true,
                 node_id: 4,
             },
-            return_type: Identifier(
-                "number",
-            ),
+            return_type: Unit,
         },
     ],
     node_id: 0,
