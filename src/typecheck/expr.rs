@@ -8,6 +8,7 @@ pub fn typecheck_expression<'nodes, 'ctx>(
     expr: &'nodes Expression,
 ) -> CompilerResult<TypecheckOutput> {
     match expr {
+        Expression::Literal(Literal::Unit) => Ok(Type::Unit.into()),
         Expression::Literal(Literal::Number(_)) => Ok(Type::Number.into()),
         Expression::Literal(Literal::String(_)) => Ok(Type::String.into()),
         Expression::Literal(Literal::Boolean(_)) => Ok(Type::Boolean.into()),
@@ -84,28 +85,42 @@ pub fn typecheck_expression<'nodes, 'ctx>(
         Expression::IfExpression(expr) => {
             let TypecheckOutput { ty, exits } =
                 typecheck_expression(ctx, state.clone(), expr.condition.as_ref())?;
-            if ty != Type::Boolean {
+            
+            if !ty.extends(&Type::Boolean) {
                 return Err(CompilerError::MismatchedTypes(format!(
                     "expected Boolean, got {:?}",
                     ty
                 )));
             }
+
             let TypecheckOutput { ty: then_ty, exits: then_exits } =
                 typecheck_expression(ctx, state.clone(), expr.body.as_ref())?;
             let TypecheckOutput { ty: else_ty, exits: else_exits } = match &expr.else_body {
                 Some(else_body) => typecheck_expression(ctx, state.clone(), else_body.as_ref())?,
                 None => Type::Unit.into(),
             };
-            if then_ty == else_ty {
-                Ok(TypecheckOutput {
-                    ty: then_ty,
+
+            match (exits, then_ty.union(&else_ty)) {
+                (_, Err(_)) => {
+                    Err(CompilerError::MismatchedTypes(format!(
+                        "cannot unify if-then-else branches {:?} and {:?} {}",
+                        then_ty, else_ty, if expr.else_body.is_none() {
+                            "missing else branch is implicitly unit type"
+                        } else {
+                            ""
+                        }
+                    )))
+                },
+                (true, _) => {
+                    Ok(TypecheckOutput {
+                        ty: Type::Never,
+                        exits: true,
+                    })
+                }
+                (false, Ok(ty)) => Ok(TypecheckOutput {
+                    ty,
                     exits: then_exits && else_exits,
                 })
-            } else {
-                Err(CompilerError::MismatchedTypes(format!(
-                    "if-then-else branches have different types: {:?} and {:?}",
-                    then_ty, else_ty
-                )))
             }
         }
         _ => panic!("Not implemented for {:?}", expr),

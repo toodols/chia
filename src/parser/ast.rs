@@ -239,6 +239,7 @@ pub struct FunctionCall {
 
 #[derive(Debug, Clone)]
 pub enum Literal {
+    Unit,
     Array(Vec<Expression>),
     ArraySized(Box<Expression>, u32),
     Identifier(String),

@@ -210,7 +210,14 @@ impl<'a> Parser<'a> {
             Some(t) => match t {
                 Token::Return => {
                     self.next_token();
-                    Ok(Expression::Return(Box::new(self.parse_expression()?)))
+                    if self.peek_token() == Some(Token::Semicolon) {
+                        // self.next_token();
+                        return Ok(Expression::Return(Box::new(Expression::Literal(
+                            Literal::Unit
+                        ))));
+                    }
+                    let expr = self.parse_expression()?;
+                    Ok(Expression::Return(Box::new(expr)))
                 }
                 Token::If => Ok(Expression::IfExpression(self.parse_if_expr()?)),
                 Token::Number

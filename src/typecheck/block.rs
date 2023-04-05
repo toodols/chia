@@ -27,10 +27,13 @@ pub fn typecheck_block<'nodes, 'ctx>(
     let mut exits = false;
     for stmt in block.statements.iter() {
         if exits {
-            println!("Warning: unreachable code");
-            break;
+            println!("warning {stmt:?} is unreachable")
         }
-        TypecheckOutput { ty, exits } = typecheck_statement(ctx, state.clone(), stmt)?;
+        let TypecheckOutput { ty: stmt_ty, exits: stmt_exits } = typecheck_statement(ctx, state.clone(), stmt)?;
+        ty = stmt_ty;
+        if stmt_exits {
+            exits = true;
+        }
     }
     Ok(TypecheckOutput {
         ty: if exits {

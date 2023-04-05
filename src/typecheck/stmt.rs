@@ -21,14 +21,14 @@ pub fn typecheck_statement<'nodes, 'ctx>(
                     decl.name
                 )))?,
             };
-            let ty: Type;
-            TypecheckOutput { ty, .. } = typecheck_expression(ctx, state.clone(), expr)?;
-            if ty == Type::Never {
-                Err(CompilerError::AnyError(format!(
-                    "{} cannot be initialized to Never",
-                    decl.name
-                )))?;
-            }
+            
+            let TypecheckOutput { ty, exits } = typecheck_expression(ctx, state.clone(), expr)?;
+            // if ty == Type::Never {
+            //     Err(CompilerError::AnyError(format!(
+            //         "{} cannot be initialized to Never",
+            //         decl.name
+            //     )))?;
+            // }
             let symbol = Symbol {
                 name: decl.name.clone(),
                 scope: state.scope,
@@ -36,7 +36,10 @@ pub fn typecheck_statement<'nodes, 'ctx>(
             ctx.symtab
                 .variables
                 .insert(symbol, (ty, NodeRef::LetDeclaration(decl)));
-            Ok(Type::Never.into())
+            Ok(TypecheckOutput{
+                ty: Type::Unit,
+                exits,
+            })
         }
     }
 }

@@ -40,9 +40,18 @@ pub enum Type {
     Never,
 }
 impl Type {
+    fn union(&self, other: &Type) -> Result<Type, ()> {
+        match (self, other) {
+            (Type::Never, _) => Ok(other.clone()),
+            (_, Type::Never) => Ok(self.clone()),
+            (left,right) if left == right => Ok(left.clone()),
+            _ => Err(()),
+        }
+    }
     fn extends(&self, other: &Type) -> bool {
         match (self, other) {
             (Type::Never, _) => true,
+            (_, Type::Never) => false,
             (t1, t2) => t1 == t2,
         }
     }
@@ -108,7 +117,7 @@ impl<'a> Symtab<'a> {
                         "number" => Type::Number,
                         "string" => Type::String,
                         "boolean" => Type::Boolean,
-                        _ => panic!(),
+                        t => panic!("{t}"),
                     }
                 }
                 TypeExpr::Unit => return Type::Unit,
@@ -130,6 +139,7 @@ pub enum CompilerError {
 type CompilerResult<T> = Result<T, CompilerError>;
 
 /// Generic typecheck output information
+#[derive(Debug)]
 pub struct TypecheckOutput {
     pub ty: Type,
     pub exits: bool,
