@@ -1,112 +1,106 @@
 Program {
     functions: [
         FunctionDeclaration {
-            name: "if_never",
-            parameters: [
-                (
-                    "val",
-                    Identifier(
-                        "boolean",
-                    ),
-                ),
-            ],
+            name: "main",
+            parameters: [],
             body: Block {
                 statements: [
                     LetDeclaration(
                         LetDeclaration {
-                            name: "a",
+                            pat: Ident(
+                                "a",
+                            ),
                             value: Some(
-                                IfExpression {
-                                    condition: Identifier(
-                                        "val",
+                                ForLoop {
+                                    pat: Ident(
+                                        "i",
                                     ),
+                                    iter: BinaryOperation {
+                                        operator: Range,
+                                        left: Number(
+                                            0,
+                                        ),
+                                        right: Number(
+                                            1000,
+                                        ),
+                                    },
                                     body: Block {
                                         statements: [
-                                            Expression(
-                                                Return(
-                                                    Number(
-                                                        123,
+                                            LetDeclaration(
+                                                LetDeclaration {
+                                                    pat: Ident(
+                                                        "should_be_never",
                                                     ),
-                                                ),
+                                                    value: Some(
+                                                        IfExpression {
+                                                            condition: BinaryOperation {
+                                                                operator: Equal,
+                                                                left: Identifier(
+                                                                    "i",
+                                                                ),
+                                                                right: Number(
+                                                                    5,
+                                                                ),
+                                                            },
+                                                            body: Block {
+                                                                statements: [
+                                                                    Expression(
+                                                                        Break(
+                                                                            Number(
+                                                                                1,
+                                                                            ),
+                                                                        ),
+                                                                    ),
+                                                                    Empty,
+                                                                    Empty,
+                                                                    Empty,
+                                                                    Empty,
+                                                                    Empty,
+                                                                    Empty,
+                                                                ],
+                                                                does_return: false,
+                                                                node_id: 3,
+                                                            },
+                                                            else_body: Some(
+                                                                Block {
+                                                                    statements: [
+                                                                        Expression(
+                                                                            Return(
+                                                                                String(
+                                                                                    "yes",
+                                                                                ),
+                                                                            ),
+                                                                        ),
+                                                                    ],
+                                                                    does_return: false,
+                                                                    node_id: 4,
+                                                                },
+                                                            ),
+                                                        },
+                                                    ),
+                                                },
                                             ),
-                                            Expression(
-                                                Number(
-                                                    1,
-                                                ),
-                                            ),
+                                            Empty,
                                         ],
-                                        does_return: true,
+                                        does_return: false,
                                         node_id: 2,
                                     },
-                                    else_body: Some(
-                                        Block {
-                                            statements: [
-                                                Expression(
-                                                    Return(
-                                                        Number(
-                                                            456,
-                                                        ),
-                                                    ),
-                                                ),
-                                            ],
-                                            does_return: false,
-                                            node_id: 3,
-                                        },
-                                    ),
                                 },
                             ),
                         },
                     ),
-                    Empty,
-                ],
-                does_return: false,
-                node_id: 1,
-            },
-            return_type: Identifier(
-                "number",
-            ),
-        },
-        FunctionDeclaration {
-            name: "never_condition",
-            parameters: [],
-            body: Block {
-                statements: [
                     Expression(
-                        IfExpression {
-                            condition: Return(
-                                Unit,
-                            ),
-                            body: Block {
-                                statements: [
-                                    Expression(
-                                        Number(
-                                            1,
-                                        ),
-                                    ),
-                                ],
-                                does_return: true,
-                                node_id: 5,
-                            },
-                            else_body: Some(
-                                Block {
-                                    statements: [
-                                        Expression(
-                                            Number(
-                                                2,
-                                            ),
-                                        ),
-                                    ],
-                                    does_return: true,
-                                    node_id: 6,
-                                },
-                            ),
-                        },
+                        String(
+                            "eee",
+                        ),
                     ),
                 ],
                 does_return: true,
-                node_id: 4,
+                node_id: 1,
             },
-            return_type: Unit,
+            return_type: Identifier(
+                "string",
+            ),
         },
     ],
     node_id: 0,

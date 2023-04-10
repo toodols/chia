@@ -1,8 +1,23 @@
 use super::lexer::Token;
 
+// ??
 struct Node<T> {
     value: T,
     // span: Span,
+}
+
+#[derive(Clone, Debug)]
+pub enum Pattern {
+    Ident(String),
+}
+
+impl Pattern {
+    pub fn ident(&self) -> String {
+        match self {
+            Pattern::Ident(s) => s.clone(),
+            _ => panic!(),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -11,7 +26,7 @@ pub struct Program {
     pub node_id: usize,
 }
 
-pub type Parameters = Vec<(String, TypeExpr)>;
+pub type Parameters = Vec<(Pattern, TypeExpr)>;
 
 #[derive(Debug, Clone)]
 pub struct FunctionDeclaration {
@@ -177,6 +192,7 @@ pub struct Index {
 
 #[derive(Clone)]
 pub enum Expression {
+    Break(Box<Expression>),
     Index(Index),
     Block(Block),
     BinaryOperation(BinaryOperation),
@@ -185,6 +201,7 @@ pub enum Expression {
     FunctionCall(FunctionCall),
     IfExpression(IfExpression),
     Return(Box<Expression>),
+    ForLoop(ForLoop),
 }
 impl std::fmt::Debug for Expression {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -196,9 +213,9 @@ impl std::fmt::Debug for Expression {
             Self::Literal(arg0) => arg0.fmt(f),
             Self::FunctionCall(arg0) => arg0.fmt(f),
             Self::IfExpression(arg0) => arg0.fmt(f),
-            ret_expr @ Self::Return(arg0) => {
-                f.debug_tuple("Return").field(arg0).finish()
-            },
+            Self::ForLoop(arg0) => arg0.fmt(f),
+            Self::Break(arg0) => f.debug_tuple("Break").field(arg0).finish(),
+            Self::Return(arg0) => f.debug_tuple("Return").field(arg0).finish(),
         }
     }
 }
@@ -227,7 +244,7 @@ impl Expression {
 
 #[derive(Debug, Clone)]
 pub struct LetDeclaration {
-    pub name: String,
+    pub pat: Pattern,
     pub value: Option<Expression>,
 }
 
@@ -235,6 +252,13 @@ pub struct LetDeclaration {
 pub struct FunctionCall {
     pub value: Box<Expression>,
     pub arguments: Vec<Expression>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ForLoop {
+    pub pat: Pattern,
+    pub iter: Box<Expression>,
+    pub body: Block,
 }
 
 #[derive(Debug, Clone)]

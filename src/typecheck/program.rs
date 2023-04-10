@@ -5,13 +5,13 @@ use super::{
     Symtab, Type,
 };
 
-pub fn typecheck_program<'a>(program: &'a Program) -> CompilerResult<Context<'a>> {
+pub fn typecheck_program<'nodes>(program: &'nodes Program) -> CompilerResult<Context<'nodes>> {
     let mut context = Context {
         symtab: Symtab::new(),
     };
     let state = State {
         scope: 0,
-        expect_return: None,
+        ..Default::default()
     };
     {
         let mut context = &mut context;

@@ -1,2 +1,1 @@
-My attempt at creating a rust-like statically typed language
-So that it can be transpiled to other shit
+My attempt at creating a rust-like statically typed language. Obviously rust is too large of a language for me to even recreate a fraction of, much less trait solving and borrow checking. This would be useful as an intermediate language for transpilation.

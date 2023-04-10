@@ -7,5 +7,4 @@ fn test() {
     std::fs::write("ast", format!("{:#?}", program)).unwrap();
     let e = typecheck::typecheck_program(&program).unwrap();
     println!("{:#?}", e);
-    
 }

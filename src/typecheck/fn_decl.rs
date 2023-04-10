@@ -2,18 +2,36 @@ use crate::parser::ast::FunctionDeclaration;
 
 use super::{typecheck_block, CompilerError, CompilerResult, Context, NodeRef, State, Symbol};
 
-pub fn typecheck_function_declaration<'a, 'ctx>(
-    ctx: &'ctx mut Context<'a>,
+pub fn typecheck_function_declaration<'nodes, 'ctx>(
+    ctx: &'ctx mut Context<'nodes>,
     state: State,
-    function: &'a FunctionDeclaration,
-) -> CompilerResult<&'ctx mut Context<'a>> {
+    function: &'nodes FunctionDeclaration,
+) -> CompilerResult<&'ctx mut Context<'nodes>> {
     let scope = state.scope;
     let body_scope = function.body.node_id;
+
+    // parent is inserted again in typecheck_block with the same arguments
+    /*
+    Current implementation. `p` and `T` and `R` is considered to be part of scope 1
+    <scope 0>
+    <scope 1> fn a( p: T ) -> R
+    <scope 1> {
+        ...
+    }
+
+    Alternate implementation. Possible by assigning a node_id for `FnDecl` and using that as the parent of `Block`
+    But largely redundant.
+    <scope 0>
+    <scope 1> fn a( p: T ) -> R
+    <scope 2> {
+        ...
+    }
+     */
     ctx.symtab.parents.insert(body_scope, scope);
-    for (name, type_expr) in function.parameters.iter() {
+    for (pat, type_expr) in function.parameters.iter() {
         ctx.symtab.variables.insert(
             Symbol {
-                name: name.clone(),
+                name: pat.ident(),
                 scope: body_scope,
             },
             (
@@ -27,11 +45,12 @@ pub fn typecheck_function_declaration<'a, 'ctx>(
         ctx,
         State {
             scope,
-            expect_return: Some(return_type.clone()),
+            expect_return_type: Some(return_type.clone()),
+            ..Default::default()
         },
         &function.body,
     )?;
-    if block_output.ty.extends(&return_type) {
+    if block_output.ty.is_subtype(&return_type) {
         Ok(ctx)
     } else {
         Err(CompilerError::AnyError(format!(

@@ -37,12 +37,13 @@ impl<'a> Tokens<'a> {
     /// Expects the next token to be {token} and errors otherwise;
     fn expect_token(&mut self, token: Token) -> Result<&str, ParseError> {
         // thank you, copilot
-        match self.next_token() {
+        let t = match self.next_token() {
             Some(Token::Error) => Err(ParseError::LexError),
             Some(t) if t == token => Ok(self.tokens.slice()),
             Some(t) => Err(ParseError::UnexpectedToken(t)),
             None => Err(ParseError::UnexpectedEOF),
-        }
+        };
+        t
     }
     fn slice_token(&self) -> &str {
         self.tokens.slice()
@@ -109,7 +110,6 @@ impl<'a> Parser<'a> {
             Some(Token::Error) => Err(ParseError::LexError),
             Some(Token::LBracket) => {
                 let initial = self.parse_expression()?;
-                println!("{:?}", self.peek_token());
                 match self.next_token() {
                     Some(Token::Semicolon) => {
                         let len = self.expect_token(Token::Number)?.parse().unwrap();
@@ -208,7 +208,8 @@ impl<'a> Parser<'a> {
     fn parse_atomic_expression(&mut self) -> Result<Expression, ParseError> {
         match self.peek_token() {
             Some(t) => match t {
-                Token::Return => {
+                Token::For | Token::While | Token::Loop => self.parse_loops(),
+                t @ (Token::Break | Token::Return) => {
                     self.next_token();
                     // if self.peek_token() == Some(Token::Semicolon) {
                     //     // self.next_token();
@@ -216,16 +217,18 @@ impl<'a> Parser<'a> {
                     //         Literal::Unit
                     //     ))));
                     // }
-                    match self.peek_token() {
+
+                    let inner = Box::new(match self.peek_token() {
                         Some(t) if t.is_expression_start() => {
                             let expr = self.parse_expression()?;
-                            return Ok(Expression::Return(Box::new(expr)));
+                            expr
                         }
-                        _ => {
-                            return Ok(Expression::Return(Box::new(Expression::Literal(
-                                Literal::Unit
-                            ))));
-                        }
+                        _ => Expression::Literal(Literal::Unit),
+                    });
+                    match t {
+                        Token::Break => Ok(Expression::Break(inner)),
+                        Token::Return => Ok(Expression::Return(inner)),
+                        _ => unreachable!(),
                     }
                 }
                 Token::If => Ok(Expression::IfExpression(self.parse_if_expr()?)),
@@ -323,7 +326,7 @@ impl<'a> Parser<'a> {
 
     fn parse_let_declaration(&mut self) -> Result<LetDeclaration, ParseError> {
         self.expect_token(Token::Let)?;
-        let name = self.expect_token(Token::Identifier)?.to_owned();
+        let pat = self.parse_pattern()?;
 
         if self.peek_token() == Some(Token::Assign) {
             self.expect_token(Token::Assign)?;
@@ -332,13 +335,18 @@ impl<'a> Parser<'a> {
                 self.expect_token(Token::Semicolon)?;
             }
             Ok(LetDeclaration {
-                name,
+                pat,
                 value: Some(value),
             })
         } else {
             self.expect_token(Token::Semicolon)?;
-            Ok(LetDeclaration { name, value: None })
+            Ok(LetDeclaration { pat, value: None })
         }
+    }
+
+    fn parse_pattern(&mut self) -> Result<Pattern, ParseError> {
+        let ident = self.expect_token(Token::Identifier)?;
+        Ok(Pattern::Ident(ident.to_owned()))
     }
 
     fn parse_block(&mut self) -> Result<Block, ParseError> {
@@ -430,16 +438,37 @@ impl<'a> Parser<'a> {
         self.expect_token(Token::LParen)?;
         let mut params = Vec::new();
         while self.peek_token() != Some(Token::RParen) {
-            let name = self.expect_token(Token::Identifier)?.to_owned();
+            let pat = self.parse_pattern()?;
             self.expect_token(Token::Colon)?;
             let param_type = self.parse_type()?;
-            params.push((name.to_string(), param_type));
+            params.push((pat, param_type));
             if self.peek_token() == Some(Token::Comma) {
                 self.next_token();
             }
         }
         self.expect_token(Token::RParen)?;
         Ok(params)
+    }
+
+    fn parse_loops(&mut self) -> Result<Expression, ParseError> {
+        match self.peek_token() {
+            // Some(Token::While) => Ok(Loop::While(self.parse_while_loop()?)),
+            Some(Token::For) => Ok(Expression::ForLoop(self.parse_for_loop()?)),
+            _ => Err(ParseError::Message("Expected While or For".to_owned())),
+        }
+    }
+
+    fn parse_for_loop(&mut self) -> Result<ForLoop, ParseError> {
+        self.expect_token(Token::For)?;
+        let pat = self.parse_pattern()?;
+        self.expect_token(Token::In)?;
+        let iter = Box::new(self.parse_expression()?);
+        let block = self.parse_block()?;
+        Ok(ForLoop {
+            pat,
+            iter,
+            body: block,
+        })
     }
 
     fn parse_type(&mut self) -> Result<TypeExpr, ParseError> {
@@ -509,6 +538,7 @@ impl<'a> Parser<'a> {
                 token => panic!("Expected function declaration but got {:?}", token),
             }
         }
+        println!("finished parsing");
         Ok(Program { functions, node_id })
     }
 }

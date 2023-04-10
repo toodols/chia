@@ -24,25 +24,21 @@ pub fn typecheck_block<'nodes, 'ctx>(
         ..state
     };
     let mut ty = Type::Unit;
-    let mut exits = false;
+    let mut exit_ty = Type::Never;
+    let mut ty_is_never = false;
     for stmt in block.statements.iter() {
-        if exits {
-            println!("warning {stmt:?} is unreachable")
+        let TypecheckOutput {
+            ty: stmt_ty,
+            exit_ty: stmt_exit_ty,
+        } = typecheck_statement(ctx, state.clone(), stmt)?;
+        if ty == Type::Never {
+            ty_is_never = true;
         }
-        let TypecheckOutput { ty: stmt_ty, exits: stmt_exits } = typecheck_statement(ctx, state.clone(), stmt)?;
         ty = stmt_ty;
-        if stmt_exits {
-            exits = true;
-        }
+        exit_ty = exit_ty.union(&stmt_exit_ty)?;
     }
     Ok(TypecheckOutput {
-        ty: if exits {
-            Type::Never
-        } else if block.does_return {
-            ty
-        } else {
-            Type::Unit
-        },
-        exits,
+        ty: if ty_is_never { Type::Never } else { ty },
+        exit_ty
     })
 }

@@ -18,11 +18,11 @@ pub fn typecheck_statement<'nodes, 'ctx>(
                 Some(val) => val,
                 None => Err(CompilerError::AnyError(format!(
                     "{} must be initialized",
-                    decl.name
+                    decl.pat.ident()
                 )))?,
             };
-            
-            let TypecheckOutput { ty, exits } = typecheck_expression(ctx, state.clone(), expr)?;
+
+            let TypecheckOutput { ty, exit_ty } = typecheck_expression(ctx, state.clone(), expr)?;
             // if ty == Type::Never {
             //     Err(CompilerError::AnyError(format!(
             //         "{} cannot be initialized to Never",
@@ -30,15 +30,15 @@ pub fn typecheck_statement<'nodes, 'ctx>(
             //     )))?;
             // }
             let symbol = Symbol {
-                name: decl.name.clone(),
+                name: decl.pat.ident(),
                 scope: state.scope,
             };
             ctx.symtab
                 .variables
                 .insert(symbol, (ty, NodeRef::LetDeclaration(decl)));
-            Ok(TypecheckOutput{
+            Ok(TypecheckOutput {
                 ty: Type::Unit,
-                exits,
+                exit_ty
             })
         }
     }

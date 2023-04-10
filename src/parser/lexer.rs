@@ -111,6 +111,14 @@ pub enum Token {
     Ref,
     #[token("for")]
     For,
+    #[token("while")]
+    While,
+    #[token("break")]
+    Break,
+    #[token("continue")]
+    Continue,
+    #[token("loop")]
+    Loop,
     #[token("in")]
     In,
     #[token("use")]
@@ -156,6 +164,7 @@ impl Token {
                 | Token::NotEqual
                 | Token::GreaterThan
                 | Token::LessThan
+                | Token::Range
         )
     }
 }

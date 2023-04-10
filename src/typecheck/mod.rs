@@ -33,6 +33,7 @@ pub enum Type {
     String,
     Boolean,
     Unit,
+    Range,
     Function(Vec<Type>, Box<Type>),
     Tuple(Vec<Type>),
     /// For example `struct Vector {x: number, y: number}` will insert a new type to the symtab
@@ -40,19 +41,20 @@ pub enum Type {
     Never,
 }
 impl Type {
-    fn union(&self, other: &Type) -> Result<Type, ()> {
+    fn union(&self, other: &Type) -> Result<Type, CompilerError> {
         match (self, other) {
             (Type::Never, _) => Ok(other.clone()),
             (_, Type::Never) => Ok(self.clone()),
-            (left,right) if left == right => Ok(left.clone()),
-            _ => Err(()),
+            (left, right) if left == right => Ok(left.clone()),
+            _ => Err(CompilerError::AnyError(format!("Cannot unify {:?} and {:?}", self, other))),
         }
     }
-    fn extends(&self, other: &Type) -> bool {
+    fn is_subtype(&self, other: &Type) -> bool {
         match (self, other) {
+            (t1, t2) if t1 == t2 => true,
             (Type::Never, _) => true,
             (_, Type::Never) => false,
-            (t1, t2) => t1 == t2,
+            _=> false,
         }
     }
 }
@@ -60,12 +62,14 @@ impl Type {
 enum NodeRef<'a> {
     FunctionDeclaration(&'a FunctionDeclaration),
     LetDeclaration(&'a LetDeclaration),
+    ForLoop(&'a ForLoop),
 }
 impl<'a> Debug for NodeRef<'a> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             NodeRef::FunctionDeclaration(func) => write!(f, "FunctionDeclaration({})", func.name),
-            NodeRef::LetDeclaration(decl) => write!(f, "LetDeclaration({})", decl.name),
+            NodeRef::LetDeclaration(decl) => write!(f, "LetDeclaration({})", decl.pat.ident()),
+            NodeRef::ForLoop(loop_) => write!(f, "ForLoop({})", loop_.pat.ident()),
         }
     }
 }
@@ -141,12 +145,23 @@ type CompilerResult<T> = Result<T, CompilerError>;
 /// Generic typecheck output information
 #[derive(Debug)]
 pub struct TypecheckOutput {
+    // The type of the expression
     pub ty: Type,
-    pub exits: bool,
+    // What value break exited with
+    pub exit_ty: Type,
 }
 impl From<Type> for TypecheckOutput {
     fn from(ty: Type) -> Self {
-        Self { ty, exits: false }
+        Self { ty, ..Default::default() }
+    }
+}
+
+impl Default for TypecheckOutput {
+    fn default() -> Self {
+        Self {
+            ty: Type::Never,
+            exit_ty: Type::Never,
+        }
     }
 }
 
@@ -155,8 +170,28 @@ pub struct Context<'a> {
     pub symtab: Symtab<'a>,
 }
 
+impl<'a> Context<'a> {
+    fn iter_item_ty(&self, ty: Type) -> Option<Type> {
+        match ty {
+            Type::Range => Some(Type::Number),
+            _ => None,
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct State {
     pub scope: usize,
-    pub expect_return: Option<Type>,
+    pub expect_return_type: Option<Type>,
+    pub expect_break: bool,
+}
+
+impl Default for State {
+    fn default() -> Self {
+        Self {
+            scope: 0,
+            expect_return_type: None,
+            expect_break: false,
+        }
+    }
 }
