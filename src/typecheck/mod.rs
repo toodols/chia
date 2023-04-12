@@ -15,12 +15,6 @@ mod fn_decl;
 mod program;
 mod stmt;
 
-#[derive(Clone, PartialEq, Eq, Hash)]
-pub enum SymbolName {
-	External(String),
-	Internal(usize),
-}
-
 impl Debug for SymbolName {
 	fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
 		match self {

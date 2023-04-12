@@ -1,6 +1,5 @@
 use crate::{
-	parser::{ast::Literal, lexer::Token, ParseError, Parser},
-	typecheck::SymbolName,
+	parser::{ast::Literal, lexer::Token, ParseError, Parser, SymbolName},
 };
 
 use super::parse_expression;

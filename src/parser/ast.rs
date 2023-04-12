@@ -1,10 +1,16 @@
-use crate::typecheck::SymbolName;
 
 use super::lexer::Token;
 
 struct Node<T> {
     value: T,
     // span: Span,
+}
+
+
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub enum SymbolName {
+	External(String),
+	Internal(usize),
 }
 
 #[derive(Debug, Clone)]
@@ -43,6 +49,8 @@ pub struct FunctionDeclaration {
 #[derive(Debug, Clone)]
 pub enum Item {
     FunctionDeclaration(FunctionDeclaration),
+    TupleStruct(TupleStruct),
+    Struct(Struct),
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -191,6 +199,19 @@ pub struct Block {
     pub does_return: bool,
     // Used to reference the symbol table constructed for each scope
     pub node_id: usize,
+}
+
+#[derive(Debug, Clone)]
+pub struct TupleStruct {
+    pub name: SymbolName,
+    pub fields: Vec<TypeExpr>,
+}
+
+
+#[derive(Debug, Clone)]
+pub struct Struct {
+    pub name: SymbolName,
+    pub fields: Vec<(SymbolName, TypeExpr)>,
 }
 
 #[derive(Debug, Clone)]

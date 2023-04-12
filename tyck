@@ -1,0 +1,32 @@
+Context {
+    symtab: Symtab {
+        variables: {
+            main@0: (
+                Function(
+                    [],
+                    String,
+                ),
+                FunctionDeclaration("main"),
+            ),
+            a@1: (
+                Number,
+                LetDeclaration("a"),
+            ),
+            i@2: (
+                Number,
+                ForLoop("i"),
+            ),
+            should_be_never@2: (
+                Never,
+                LetDeclaration("should_be_never"),
+            ),
+        },
+        types: {},
+        parents: {
+            3: 2,
+            1: 0,
+            4: 2,
+            2: 1,
+        },
+    },
+}

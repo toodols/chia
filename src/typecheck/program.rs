@@ -35,6 +35,7 @@ pub fn typecheck_program<'nodes>(program: &'nodes Program) -> CompilerResult<Con
 						),
 					);
 				}
+				_ => todo!("")
 			}
 		}
 
@@ -42,7 +43,8 @@ pub fn typecheck_program<'nodes>(program: &'nodes Program) -> CompilerResult<Con
 			match item {
 				Item::FunctionDeclaration(func) => {
 					context = typecheck_function_declaration(context, state.clone(), func)?;
-				}
+				},
+				_ => todo!()
 			}
 		}
 	}

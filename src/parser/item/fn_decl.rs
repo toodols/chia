@@ -4,8 +4,8 @@ use crate::{
         expr::block::parse_block,
         lexer::Token,
         parse_pattern, parse_type, ParseError, Parser,
+        SymbolName,
     },
-    typecheck::SymbolName,
 };
 
 fn parse_fn_params(parser: &mut Parser) -> Result<Parameters, ParseError> {

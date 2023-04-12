@@ -1,4 +1,4 @@
-use crate::parser::ast::FunctionDeclaration;
+use crate::parser::ast::{FunctionDeclaration, SymbolName};
 
 use super::{typecheck_block, CompilerError, CompilerResult, Context, NodeRef, State, Symbol};
 
