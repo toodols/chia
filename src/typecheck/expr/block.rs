@@ -1,6 +1,6 @@
 use crate::parser::ast::Block;
 
-use super::{typecheck_statement, CompilerResult, Context, State, Type, TypecheckOutput};
+use super::super::{typecheck_statement, CompilerResult, Context, State, Type, TypecheckOutput};
 
 /*
 // b should be never
@@ -39,6 +39,6 @@ pub fn typecheck_block<'nodes, 'ctx>(
     }
     Ok(TypecheckOutput {
         ty: if ty_is_never { Type::Never } else { ty },
-        exit_ty
+        exit_ty,
     })
 }

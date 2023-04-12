@@ -1,4 +1,4 @@
-use crate::parser::ast::Program;
+use crate::parser::ast::{Program, Item};
 
 use super::{
     fn_decl::typecheck_function_declaration, CompilerResult, Context, NodeRef, State, Symbol,
@@ -15,27 +15,35 @@ pub fn typecheck_program<'nodes>(program: &'nodes Program) -> CompilerResult<Con
     };
     {
         let mut context = &mut context;
-        for func in program.functions.iter() {
-            context.symtab.variables.insert(
-                Symbol {
-                    name: func.name.clone(),
-                    scope: 0,
-                },
-                (
-                    Type::Function(
-                        func.parameters
-                            .iter()
-                            .map(|(name, ty_expr)| context.symtab.get_type(0, ty_expr))
-                            .collect(),
-                        Box::new(context.symtab.get_type(0, &func.return_type)),
-                    ),
-                    NodeRef::FunctionDeclaration(func),
-                ),
-            );
+        for item in program.items.iter() {
+            match item {
+                Item::FunctionDeclaration(func) => {
+                    context.symtab.variables.insert(
+                        Symbol {
+                            name: func.name.clone(),
+                            scope: 0,
+                        },
+                        (
+                            Type::Function(
+                                func.parameters
+                                    .iter()
+                                    .map(|(name, ty_expr)| context.symtab.get_type(0, ty_expr))
+                                    .collect(),
+                                Box::new(context.symtab.get_type(0, &func.return_type)),
+                            ),
+                            NodeRef::FunctionDeclaration(func),
+                        ),
+                    );
+                }
+            }
         }
 
-        for func in program.functions.iter() {
-            context = typecheck_function_declaration(context, state.clone(), func)?;
+        for item in program.items.iter() {
+            match item {
+                Item::FunctionDeclaration(func) => {
+                    context = typecheck_function_declaration(context, state.clone(), func)?;
+                }
+            }
         }
     }
     Ok(context)

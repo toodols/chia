@@ -17,7 +17,7 @@ pub fn typecheck_statement<'nodes, 'ctx>(
             let expr = match &decl.value {
                 Some(val) => val,
                 None => Err(CompilerError::AnyError(format!(
-                    "{} must be initialized",
+                    "{:?} must be initialized",
                     decl.pat.ident()
                 )))?,
             };
@@ -38,7 +38,7 @@ pub fn typecheck_statement<'nodes, 'ctx>(
                 .insert(symbol, (ty, NodeRef::LetDeclaration(decl)));
             Ok(TypecheckOutput {
                 ty: Type::Unit,
-                exit_ty
+                exit_ty,
             })
         }
     }

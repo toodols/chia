@@ -1,7 +1,13 @@
+pub mod block;
+pub mod for_loop;
+pub mod if_expr;
 use crate::parser::ast::{BinaryOperation, BinaryOperator, Expression, Literal};
+use block::typecheck_block;
+use for_loop::typecheck_for_loop;
+use self::if_expr::typecheck_if_expr;
 
 use super::{
-    typecheck_block, CompilerError, CompilerResult, Context, NodeRef, State, Symbol, Type,
+    CompilerError, CompilerResult, Context, NodeRef, State, Symbol, Type,
     TypecheckOutput,
 };
 
@@ -26,7 +32,11 @@ pub fn typecheck_expression<'nodes, 'ctx>(
             let TypecheckOutput { ty: right_ty, .. } = typecheck_expression(ctx, state, &op.right)?;
             match op {
                 BinaryOperation {
-                    operator: BinaryOperator::Add | BinaryOperator::Mul | BinaryOperator::Sub | BinaryOperator::Div,
+                    operator:
+                        BinaryOperator::Add
+                        | BinaryOperator::Mul
+                        | BinaryOperator::Sub
+                        | BinaryOperator::Div,
                     ..
                 } => match (left_ty, right_ty) {
                     (Type::Number, Type::Number) => Ok(Type::Number.into()),
@@ -86,51 +96,7 @@ pub fn typecheck_expression<'nodes, 'ctx>(
                 )))
             }
         }
-        Expression::ForLoop(expr) => {
-            let inner_scope = expr.body.node_id;
-            let t = typecheck_expression(
-                ctx,
-                State {
-                    scope: inner_scope,
-                    ..state.clone()
-                },
-                &expr.iter,
-            )?;
-
-            if t.ty == Type::Never {
-                return Ok(t);
-            }
-            let iter_item_ty = ctx
-                .iter_item_ty(t.ty.clone())
-                .ok_or(CompilerError::AnyError(format!(
-                    "{:?} not an iterator",
-                    t.ty
-                )))?;
-            ctx.symtab.parents.insert(inner_scope, state.scope);
-            ctx.symtab.variables.insert(
-                Symbol {
-                    name: expr.pat.ident(),
-                    scope: inner_scope,
-                },
-                (iter_item_ty, NodeRef::ForLoop(expr)),
-            );
-
-            let block = typecheck_block(
-                ctx,
-                State {
-                    expect_break: true,
-                    ..state
-                },
-                &expr.body,
-            )?;
-            
-            // read as: "if the loop body cannot be coerced into unit type"
-            if !block.ty.is_subtype(&Type::Unit) {
-                return Err(CompilerError::AnyError(format!("Loop cannot return {:?}", block.ty)));
-            }
-            
-            Ok(TypecheckOutput { ty: block.exit_ty, exit_ty: Type::Never })
-        }
+        Expression::ForLoop(expr) => typecheck_for_loop(ctx,state,expr),
         Expression::Break(expr) => {
             if state.expect_break {
                 let TypecheckOutput { ty, exit_ty } = typecheck_expression(ctx, state, expr)?;
@@ -141,7 +107,7 @@ pub fn typecheck_expression<'nodes, 'ctx>(
             } else {
                 Err(CompilerError::AnyError(format!("Break is not expected")))
             }
-        },
+        }
         Expression::Return(expr) => {
             let TypecheckOutput { ty, .. } = typecheck_expression(ctx, state.clone(), expr)?;
             if let Some(expect_ty) = state.expect_return_type {
@@ -161,48 +127,8 @@ pub fn typecheck_expression<'nodes, 'ctx>(
             }
         }
         Expression::Block(block) => typecheck_block(ctx, state, block),
-        Expression::IfExpression(expr) => {
-            let TypecheckOutput { ty, .. } =
-                typecheck_expression(ctx, state.clone(), expr.condition.as_ref())?;
-
-            if !ty.is_subtype(&Type::Boolean) {
-                return Err(CompilerError::MismatchedTypes(format!(
-                    "expected Boolean, got {:?}",
-                    ty
-                )));
-            }
-
-            let TypecheckOutput {
-                ty: then_ty,
-                exit_ty: if_exit_ty,
-            } = typecheck_expression(ctx, state.clone(), expr.body.as_ref())?;
-            let TypecheckOutput {
-                ty: else_ty,
-                exit_ty: else_exit_ty,
-            } = match &expr.else_body {
-                Some(else_body) => typecheck_expression(ctx, state.clone(), else_body.as_ref())?,
-                None => Type::Unit.into(),
-            };
-
-            let exit_ty = if_exit_ty.union(&else_exit_ty)?;
-
-            match then_ty.union(&else_ty) {
-                Err(_) => Err(CompilerError::MismatchedTypes(format!(
-                    "cannot unify if-then-else branches {:?} and {:?} {}",
-                    then_ty,
-                    else_ty,
-                    if expr.else_body.is_none() {
-                        "missing else branch is implicitly unit type"
-                    } else {
-                        ""
-                    }
-                ))),
-                Ok(ty) => Ok(TypecheckOutput {
-                    ty,
-                    exit_ty,
-                }),
-            }
-        }
+        Expression::IfExpression(expr) => typecheck_if_expr(ctx,state,expr),
+		
         _ => panic!("Not implemented for {:?}", expr),
     }
 }

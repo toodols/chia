@@ -4,6 +4,8 @@ use ast::*;
 use lexer::Token;
 use logos::Logos;
 
+use crate::typecheck::SymbolName;
+
 struct Tokens<'a> {
     tokens: logos::Lexer<'a, Token>,
     peeked: Option<Token>,
@@ -106,7 +108,7 @@ impl<'a> Parser<'a> {
                 let text = self.slice_token();
                 Ok(Literal::String(text[1..text.len() - 1].to_string()))
             }
-            Some(Token::Identifier) => Ok(Literal::Identifier(self.slice_token().to_owned())),
+            Some(Token::Identifier) => Ok(Literal::Identifier(SymbolName::External(self.slice_token().to_owned()))),
             Some(Token::Error) => Err(ParseError::LexError),
             Some(Token::LBracket) => {
                 let initial = self.parse_expression()?;
@@ -202,6 +204,60 @@ impl<'a> Parser<'a> {
             Some(_) => self.parse_expression_postfix(),
             None => Err(ParseError::UnexpectedEOF),
         }
+    }
+    fn parse_path(&mut self) -> Result<Path, ParseError> {
+        let mut path = Vec::new();
+        if self.peek_token() == Some(Token::Identifier) {
+            self.next_token();
+            path.push(self.slice_token().to_owned());
+        }
+        while self.peek_token() == Some(Token::Scope) {
+            self.next_token();
+            self.expect_token(Token::Identifier)?;
+            path.push(self.slice_token().to_owned());
+        }
+        Ok(Path(path))
+    }
+    fn parse_macro_invocation(&mut self) -> Result<Vec<Token>, ParseError> {
+        // very simple. all parentheses must be closed, all brackets must be closed, and all braces must be closed
+        enum OpenToken {
+            Brace,
+            Paren,
+            Bracket
+        }
+        impl From<Token> for OpenToken {
+            fn from(t: Token) -> Self {
+                match t {
+                    Token::LBrace | Token::RBrace => OpenToken::Brace,
+                    Token::LParen | Token::RParen => OpenToken::Paren,
+                    Token::LBracket | Token::RBracket => OpenToken::Bracket,
+                    _ => panic!("Invalid token for OpenToken")
+                }
+            }
+        }
+        let mut stack: Vec<Token> = Vec::new();
+        let mut matched: Vec<Token> = Vec::new();
+        loop {
+            let tok = self.next_token().ok_or(ParseError::UnexpectedEOF)?;
+            match tok {
+                Token::LParen | Token::LBracket | Token::LBrace => {
+                    stack.push(tok.into());
+                }
+                Token::RParen | Token::RBracket | Token::RBrace => {
+                    let open = stack.pop().ok_or(ParseError::UnexpectedToken(tok))?;
+                    if open != tok.into() {
+                        return Err(ParseError::UnexpectedToken(tok));
+                    }
+                }
+                Token::Error => return Err(ParseError::LexError),
+                _ => {}
+            }
+            matched.push(tok);
+            if stack.len() == 0 {
+                break;
+            }
+        }
+        Ok(matched)
     }
 
     // Basically expressions that don't rely on operators / precedence and are generally wrapped together nicely
@@ -493,7 +549,14 @@ impl<'a> Parser<'a> {
             None => Err(ParseError::UnexpectedEOF),
         }
     }
-
+    fn parse_item(&mut self) -> Result<Item, ParseError> {
+        match self.peek_token() {
+            Some(Token::Fn) => Ok(Item::FunctionDeclaration(self.parse_fn_declaration()?)),
+            Some(Token::Error) => Err(ParseError::LexError),
+            Some(t) => Err(ParseError::UnexpectedToken(t)),
+            None => Err(ParseError::UnexpectedEOF),
+        }
+    }
     fn parse_fn_declaration(&mut self) -> Result<FunctionDeclaration, ParseError> {
         self.expect_token(Token::Fn)?;
         let name = self.expect_token(Token::Identifier)?.to_owned();
@@ -520,7 +583,7 @@ impl<'a> Parser<'a> {
 
         let body = self.parse_block()?;
         Ok(FunctionDeclaration {
-            name,
+            name: SymbolName::External(name),
             parameters: params,
             body,
             return_type,
@@ -529,17 +592,12 @@ impl<'a> Parser<'a> {
 
     fn parse_program(&mut self) -> Result<Program, ParseError> {
         let node_id = self.node_id();
-        let mut functions = Vec::new();
+        let mut items = Vec::new();
         while let Some(token) = self.peek_token() {
-            match token {
-                Token::Fn => {
-                    functions.push(self.parse_fn_declaration()?);
-                }
-                token => panic!("Expected function declaration but got {:?}", token),
-            }
+            items.push(self.parse_item()?);
         }
         println!("finished parsing");
-        Ok(Program { functions, node_id })
+        Ok(Program { items, node_id })
     }
 }
 

@@ -1,10 +1,14 @@
+use crate::typecheck::SymbolName;
+
 use super::lexer::Token;
 
-// ??
 struct Node<T> {
     value: T,
     // span: Span,
 }
+
+#[derive(Debug, Clone)]
+pub struct Path(pub Vec<String>);
 
 #[derive(Clone, Debug)]
 pub enum Pattern {
@@ -12,9 +16,9 @@ pub enum Pattern {
 }
 
 impl Pattern {
-    pub fn ident(&self) -> String {
+    pub fn ident(&self) -> SymbolName {
         match self {
-            Pattern::Ident(s) => s.clone(),
+            Pattern::Ident(s) => SymbolName::External(s.clone()),
             _ => panic!(),
         }
     }
@@ -22,7 +26,7 @@ impl Pattern {
 
 #[derive(Debug)]
 pub struct Program {
-    pub functions: Vec<FunctionDeclaration>,
+    pub items: Vec<Item>,
     pub node_id: usize,
 }
 
@@ -30,10 +34,15 @@ pub type Parameters = Vec<(Pattern, TypeExpr)>;
 
 #[derive(Debug, Clone)]
 pub struct FunctionDeclaration {
-    pub name: String,
+    pub name: SymbolName,
     pub parameters: Parameters,
     pub body: Block,
     pub return_type: TypeExpr,
+}
+
+#[derive(Debug, Clone)]
+pub enum Item {
+    FunctionDeclaration(FunctionDeclaration),
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -266,7 +275,7 @@ pub enum Literal {
     Unit,
     Array(Vec<Expression>),
     ArraySized(Box<Expression>, u32),
-    Identifier(String),
+    Identifier(SymbolName),
     Number(i32),
     String(String),
     Boolean(bool),

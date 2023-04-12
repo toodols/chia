@@ -1,5 +1,5 @@
 use super::parser::ast::*;
-pub use block::typecheck_block;
+pub use expr::block::typecheck_block;
 pub use expr::typecheck_expression;
 pub use fn_decl::typecheck_function_declaration;
 pub use program::typecheck_program;
@@ -10,20 +10,39 @@ use std::{
     hash::Hash,
 };
 pub use stmt::typecheck_statement;
-mod block;
 mod expr;
 mod fn_decl;
 mod program;
 mod stmt;
 
 #[derive(Clone, PartialEq, Eq, Hash)]
-pub struct Symbol {
-    name: String,
-    scope: usize,
+pub enum SymbolName {
+    External(String),
+    Internal(usize),
 }
+
+impl Debug for SymbolName {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SymbolName::External(name) => write!(f, "{:?}", name),
+            SymbolName::Internal(id) => write!(f, "<{:?}>", id),
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub struct Symbol {
+    pub name: SymbolName,
+    pub scope: usize,
+}
+
 impl Debug for Symbol {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}@{}", self.name, self.scope)
+        let Symbol {name, scope} = self;
+        match name {
+            SymbolName::External(name) => write!(f, "{}@{}", name, scope),
+            SymbolName::Internal(id) => write!(f, "{}@{}", id, scope),
+        }
     }
 }
 
@@ -46,7 +65,10 @@ impl Type {
             (Type::Never, _) => Ok(other.clone()),
             (_, Type::Never) => Ok(self.clone()),
             (left, right) if left == right => Ok(left.clone()),
-            _ => Err(CompilerError::AnyError(format!("Cannot unify {:?} and {:?}", self, other))),
+            _ => Err(CompilerError::AnyError(format!(
+                "Cannot unify {:?} and {:?}",
+                self, other
+            ))),
         }
     }
     fn is_subtype(&self, other: &Type) -> bool {
@@ -54,7 +76,7 @@ impl Type {
             (t1, t2) if t1 == t2 => true,
             (Type::Never, _) => true,
             (_, Type::Never) => false,
-            _=> false,
+            _ => false,
         }
     }
 }
@@ -67,9 +89,9 @@ enum NodeRef<'a> {
 impl<'a> Debug for NodeRef<'a> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            NodeRef::FunctionDeclaration(func) => write!(f, "FunctionDeclaration({})", func.name),
-            NodeRef::LetDeclaration(decl) => write!(f, "LetDeclaration({})", decl.pat.ident()),
-            NodeRef::ForLoop(loop_) => write!(f, "ForLoop({})", loop_.pat.ident()),
+            NodeRef::FunctionDeclaration(func) => write!(f, "FunctionDeclaration({:?})", func.name),
+            NodeRef::LetDeclaration(decl) => write!(f, "LetDeclaration({:?})", decl.pat.ident()),
+            NodeRef::ForLoop(loop_) => write!(f, "ForLoop({:?})", loop_.pat.ident()),
         }
     }
 }
@@ -99,7 +121,7 @@ impl<'a> Symtab<'a> {
             parents: HashMap::new(),
         };
     }
-    fn get_variable(&self, mut scope: usize, name: String) -> Option<Type> {
+    fn get_variable(&self, mut scope: usize, name: SymbolName) -> Option<Type> {
         loop {
             if let Some((ty, _)) = self.variables.get(&Symbol {
                 name: name.clone(),
@@ -136,7 +158,7 @@ impl<'a> Symtab<'a> {
 pub enum CompilerError {
     MismatchedTypes(String),
     AnyError(String),
-    VariableNotFound(String),
+    VariableNotFound(SymbolName),
     Unknown,
 }
 
@@ -152,7 +174,10 @@ pub struct TypecheckOutput {
 }
 impl From<Type> for TypecheckOutput {
     fn from(ty: Type) -> Self {
-        Self { ty, ..Default::default() }
+        Self {
+            ty,
+            ..Default::default()
+        }
     }
 }
 
