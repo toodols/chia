@@ -1,3 +1,6 @@
+/**
+ * Comments :D
+ */
 fn main() -> string {
 	let a = for i in 0..1000 {
 		let should_be_never = if i == 5 {

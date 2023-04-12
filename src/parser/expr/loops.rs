@@ -1,4 +1,8 @@
-use crate::parser::{Parser, ast::{Expression, ForLoop}, ParseError, parse_pattern, lexer::Token};
+use crate::parser::{
+    ast::{Expression, ForLoop},
+    lexer::Token,
+    parse_pattern, ParseError, Parser,
+};
 
 use super::{block::parse_block, parse_expression};
 

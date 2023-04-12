@@ -1,4 +1,4 @@
-use crate::parser::ast::{Program, Item};
+use crate::parser::ast::{Item, Program};
 
 use super::{
     fn_decl::typecheck_function_declaration, CompilerResult, Context, NodeRef, State, Symbol,

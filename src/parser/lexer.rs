@@ -93,7 +93,7 @@ pub enum Token {
     #[token("]")]
     RBracket,
     #[regex("//.*", logos::skip)]
-    #[regex("/\\*.*\\*/", logos::skip)]
+    #[regex("/\\*([^*]|(\\*[^/]))*\\*/", logos::skip)]
     Comment,
     #[regex("[ \t\n]+", logos::skip)]
     Whitespace,

@@ -1,6 +1,10 @@
-use crate::parser::{ast::{Expression, IfExpression}, Parser, lexer::Token, ParseError};
+use crate::parser::{
+    ast::{Expression, IfExpression},
+    lexer::Token,
+    ParseError, Parser,
+};
 
-use super::{parse_expression, block::parse_block};
+use super::{block::parse_block, parse_expression};
 
 pub(super) fn parse_if_expr(parser: &mut Parser) -> Result<IfExpression, ParseError> {
     parser.expect_token(Token::If)?;

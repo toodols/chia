@@ -7,9 +7,8 @@ use ast::*;
 use lexer::Token;
 use logos::Logos;
 
-use crate::{typecheck::SymbolName, parser::item::parse_item};
-
-use self::expr::{parse_expression, block::parse_block};
+use self::expr::parse_expression;
+use self::item::parse_item;
 
 struct Tokens<'a> {
     tokens: logos::Lexer<'a, Token>,
@@ -153,7 +152,7 @@ fn parse_macro_invocation(parser: &mut Parser) -> Result<Vec<Token>, ParseError>
     enum OpenToken {
         Brace,
         Paren,
-        Bracket
+        Bracket,
     }
     impl From<Token> for OpenToken {
         fn from(t: Token) -> Self {
@@ -161,7 +160,7 @@ fn parse_macro_invocation(parser: &mut Parser) -> Result<Vec<Token>, ParseError>
                 Token::LBrace | Token::RBrace => OpenToken::Brace,
                 Token::LParen | Token::RParen => OpenToken::Paren,
                 Token::LBracket | Token::RBracket => OpenToken::Bracket,
-                _ => panic!("Invalid token for OpenToken")
+                _ => panic!("Invalid token for OpenToken"),
             }
         }
     }
@@ -238,11 +237,10 @@ fn parse_type(parser: &mut Parser) -> Result<TypeExpr, ParseError> {
     }
 }
 
-
 fn parse_program(parser: &mut Parser) -> Result<Program, ParseError> {
     let node_id = parser.node_id();
     let mut items = Vec::new();
-    while let Some(token) = parser.peek_token() {
+    while let Some(_) = parser.peek_token() {
         items.push(parse_item(parser)?);
     }
     println!("finished parsing");

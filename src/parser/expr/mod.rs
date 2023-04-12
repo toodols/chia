@@ -1,64 +1,70 @@
-use self::{literal::parse_literal, loops::parse_loops};
 use self::if_expr::parse_if_expr;
-use self::block::parse_block;
+use self::{literal::parse_literal, loops::parse_loops};
 
-use super::{Parser, ast::{Expression, Literal, UnaryOperation, UnaryOperator, FunctionCall, Index, BinaryOperator, BinaryOperation, Associativity}, ParseError, lexer::Token, parse_fn_call_body};
+use super::{
+    ast::{
+        Associativity, BinaryOperation, BinaryOperator, Expression, FunctionCall, Index, Literal,
+        UnaryOperation, UnaryOperator,
+    },
+    lexer::Token,
+    parse_fn_call_body, ParseError, Parser,
+};
 
+pub mod block;
 mod if_expr;
 mod literal;
 mod loops;
-pub mod block;
 
 // Basically expressions that don't rely on operators / precedence and are generally wrapped together nicely
 fn parse_atomic_expression(parser: &mut Parser) -> Result<Expression, ParseError> {
-        match parser.peek_token() {
-            Some(t) => match t {
-                Token::For | Token::While | Token::Loop => parse_loops(parser),
-                t @ (Token::Break | Token::Return) => {
-                    parser.next_token();
-                    // if self.peek_token() == Some(Token::Semicolon) {
-                    //     // self.next_token();
-                    //     return Ok(Expression::Return(Box::new(Expression::Literal(
-                    //         Literal::Unit
-                    //     ))));
-                    // }
+    match parser.peek_token() {
+        Some(t) => match t {
+            Token::For | Token::While | Token::Loop => parse_loops(parser),
+            t @ (Token::Break | Token::Return) => {
+                parser.next_token();
+                // if self.peek_token() == Some(Token::Semicolon) {
+                //     // self.next_token();
+                //     return Ok(Expression::Return(Box::new(Expression::Literal(
+                //         Literal::Unit
+                //     ))));
+                // }
 
-                    let inner = Box::new(match parser.peek_token() {
-                        Some(t) if t.is_expression_start() => {
-                            let expr = parse_expression(parser)?;
-                            expr
-                        }
-                        _ => Expression::Literal(Literal::Unit),
-                    });
-                    match t {
-                        Token::Break => Ok(Expression::Break(inner)),
-                        Token::Return => Ok(Expression::Return(inner)),
-                        _ => unreachable!(),
+                let inner = Box::new(match parser.peek_token() {
+                    Some(t) if t.is_expression_start() => {
+                        let expr = parse_expression(parser)?;
+                        expr
                     }
+                    _ => Expression::Literal(Literal::Unit),
+                });
+                match t {
+                    Token::Break => Ok(Expression::Break(inner)),
+                    Token::Return => Ok(Expression::Return(inner)),
+                    _ => unreachable!(),
                 }
-                Token::If => Ok(Expression::IfExpression(parse_if_expr(parser)?)),
-                Token::Number
-                | Token::True
-                | Token::False
-                | Token::String
-                | Token::Identifier
-                | Token::LBracket => {
-                    let literal = parse_literal(parser)?;
-                    Ok(Expression::Literal(literal))
-                }
-                Token::LParen => {
-                    // a * (b + c)
-                    // b + c is evaluated first
-                    parser.expect_token(Token::LParen)?;
-                    let expression = parse_expression(parser)?;
-                    parser.expect_token(Token::RParen)?;
-                    Ok(expression)
-                }
-                _ => Err(ParseError::UnexpectedToken(t)),
-            },
-            None => Err(ParseError::UnexpectedEOF),
-        }
+            }
+            Token::If => Ok(Expression::IfExpression(parse_if_expr(parser)?)),
+            Token::Number
+            | Token::True
+            | Token::False
+            | Token::String
+            | Token::Identifier
+            | Token::LBracket => {
+                let literal = parse_literal(parser)?;
+                Ok(Expression::Literal(literal))
+            }
+            Token::LParen => {
+                // a * (b + c)
+                // b + c is evaluated first
+                parser.expect_token(Token::LParen)?;
+                let expression = parse_expression(parser)?;
+                parser.expect_token(Token::RParen)?;
+                Ok(expression)
+            }
+            _ => Err(ParseError::UnexpectedToken(t)),
+        },
+        None => Err(ParseError::UnexpectedEOF),
     }
+}
 
 pub(in crate::parser) fn parse_expression(parser: &mut Parser) -> Result<Expression, ParseError> {
     let mut expressions: Vec<Expression> = vec![];
@@ -88,9 +94,7 @@ pub(in crate::parser) fn parse_expression(parser: &mut Parser) -> Result<Express
             let o_precedence = operators[op_index].precedence();
             if n_precedence.1 < o_precedence.1 {
                 op_index = i;
-            } else if n_precedence == o_precedence
-                && n_precedence.0 == Associativity::RightToLeft
-            {
+            } else if n_precedence == o_precedence && n_precedence.0 == Associativity::RightToLeft {
                 op_index = i;
             }
         }
@@ -133,7 +137,6 @@ fn parse_expression_postfix(parser: &mut Parser) -> Result<Expression, ParseErro
     }
     Ok(expr)
 }
-
 
 fn parse_expression_prefix(parser: &mut Parser) -> Result<Expression, ParseError> {
     match parser.peek_token() {

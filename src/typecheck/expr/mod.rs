@@ -1,14 +1,13 @@
 pub mod block;
 pub mod for_loop;
 pub mod if_expr;
+use self::if_expr::typecheck_if_expr;
 use crate::parser::ast::{BinaryOperation, BinaryOperator, Expression, Literal};
 use block::typecheck_block;
 use for_loop::typecheck_for_loop;
-use self::if_expr::typecheck_if_expr;
 
 use super::{
-    CompilerError, CompilerResult, Context, NodeRef, State, Symbol, Type,
-    TypecheckOutput,
+    CompilerError, CompilerResult, Context, NodeRef, State, Symbol, Type, TypecheckOutput,
 };
 
 pub fn typecheck_expression<'nodes, 'ctx>(
@@ -96,7 +95,7 @@ pub fn typecheck_expression<'nodes, 'ctx>(
                 )))
             }
         }
-        Expression::ForLoop(expr) => typecheck_for_loop(ctx,state,expr),
+        Expression::ForLoop(expr) => typecheck_for_loop(ctx, state, expr),
         Expression::Break(expr) => {
             if state.expect_break {
                 let TypecheckOutput { ty, exit_ty } = typecheck_expression(ctx, state, expr)?;
@@ -127,8 +126,8 @@ pub fn typecheck_expression<'nodes, 'ctx>(
             }
         }
         Expression::Block(block) => typecheck_block(ctx, state, block),
-        Expression::IfExpression(expr) => typecheck_if_expr(ctx,state,expr),
-		
+        Expression::IfExpression(expr) => typecheck_if_expr(ctx, state, expr),
+
         _ => panic!("Not implemented for {:?}", expr),
     }
 }

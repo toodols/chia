@@ -1,4 +1,12 @@
-use crate::{parser::{Parser, ast::{FunctionDeclaration, TypeExpr, Parameters}, ParseError, lexer::Token, parse_type, expr::block::parse_block, parse_pattern}, typecheck::SymbolName};
+use crate::{
+    parser::{
+        ast::{FunctionDeclaration, Parameters, TypeExpr},
+        expr::block::parse_block,
+        lexer::Token,
+        parse_pattern, parse_type, ParseError, Parser,
+    },
+    typecheck::SymbolName,
+};
 
 fn parse_fn_params(parser: &mut Parser) -> Result<Parameters, ParseError> {
     parser.expect_token(Token::LParen)?;

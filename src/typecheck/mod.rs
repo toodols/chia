@@ -38,7 +38,7 @@ pub struct Symbol {
 
 impl Debug for Symbol {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let Symbol {name, scope} = self;
+        let Symbol { name, scope } = self;
         match name {
             SymbolName::External(name) => write!(f, "{}@{}", name, scope),
             SymbolName::Internal(id) => write!(f, "{}@{}", id, scope),

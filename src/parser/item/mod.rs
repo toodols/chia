@@ -1,6 +1,6 @@
 use self::fn_decl::parse_fn_declaration;
 
-use super::{lexer::Token, Parser, ParseError, ast::Item};
+use super::{ast::Item, lexer::Token, ParseError, Parser};
 mod fn_decl;
 
 pub(in crate::parser) fn parse_item(parser: &mut Parser) -> Result<Item, ParseError> {

@@ -1,5 +1,9 @@
-use crate::parser::{Parser, ast::{Block, Statement}, ParseError, lexer::Token, parse_let_declaration};
 use super::parse_expression;
+use crate::parser::{
+    ast::{Block, Statement},
+    lexer::Token,
+    parse_let_declaration, ParseError, Parser,
+};
 
 pub(in crate::parser) fn parse_block(parser: &mut Parser) -> Result<Block, ParseError> {
     parser.expect_token(Token::LBrace)?;
