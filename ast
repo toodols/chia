@@ -12,89 +12,29 @@ Program {
                                     "a",
                                 ),
                                 value: Some(
-                                    ForLoop {
-                                        pat: Ident(
-                                            "i",
-                                        ),
-                                        iter: BinaryOperation {
-                                            operator: Range,
-                                            left: Number(
-                                                0,
-                                            ),
-                                            right: Number(
-                                                1000,
-                                            ),
-                                        },
-                                        body: Block {
-                                            statements: [
-                                                LetDeclaration(
-                                                    LetDeclaration {
-                                                        pat: Ident(
-                                                            "should_be_never",
-                                                        ),
-                                                        value: Some(
-                                                            IfExpression {
-                                                                condition: BinaryOperation {
-                                                                    operator: Equal,
-                                                                    left: Path(
-                                                                        [
-                                                                            "i",
-                                                                        ],
-                                                                    ),
-                                                                    right: Number(
-                                                                        5,
-                                                                    ),
-                                                                },
-                                                                body: Block {
-                                                                    statements: [
-                                                                        Expression(
-                                                                            Break(
-                                                                                Number(
-                                                                                    1,
-                                                                                ),
-                                                                            ),
-                                                                        ),
-                                                                        Empty,
-                                                                        Empty,
-                                                                        Empty,
-                                                                        Empty,
-                                                                        Empty,
-                                                                        Empty,
-                                                                    ],
-                                                                    does_return: false,
-                                                                    node_id: 3,
-                                                                },
-                                                                else_body: Some(
-                                                                    Block {
-                                                                        statements: [
-                                                                            Expression(
-                                                                                Return(
-                                                                                    String(
-                                                                                        "yes",
-                                                                                    ),
-                                                                                ),
-                                                                            ),
-                                                                        ],
-                                                                        does_return: false,
-                                                                        node_id: 4,
-                                                                    },
-                                                                ),
-                                                            },
-                                                        ),
-                                                    },
-                                                ),
-                                                Empty,
-                                            ],
-                                            does_return: false,
-                                            node_id: 2,
-                                        },
-                                    },
+                                    Number(
+                                        1,
+                                    ),
+                                ),
+                            },
+                        ),
+                        LetDeclaration(
+                            LetDeclaration {
+                                pat: Ident(
+                                    "a",
+                                ),
+                                value: Some(
+                                    Number(
+                                        2,
+                                    ),
                                 ),
                             },
                         ),
                         Expression(
-                            String(
-                                "eee",
+                            Path(
+                                [
+                                    "a",
+                                ],
                             ),
                         ),
                     ],
@@ -102,7 +42,7 @@ Program {
                     node_id: 1,
                 },
                 return_type: Identifier(
-                    "string",
+                    "number",
                 ),
             },
         ),

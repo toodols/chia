@@ -1,13 +1,8 @@
 /**
  * Comments :D
  */
-fn main() -> string {
-	let a = for i in 0..1000 {
-		let should_be_never = if i == 5 {
-			break 1;;;;;;;
-		} else {
-			return "yes";
-		};
-	};
-	"eee"
+fn main() -> number {
+	let a = 1;
+	let a = 2;
+	a
 }

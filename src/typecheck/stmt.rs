@@ -23,6 +23,7 @@ pub fn typecheck_statement<'nodes, 'ctx>(
 			};
 
 			let TypecheckOutput { ty, exit_ty } = typecheck_expression(ctx, state.clone(), expr)?;
+
 			// if ty == Type::Never {
 			//     Err(CompilerError::AnyError(format!(
 			//         "{} cannot be initialized to Never",
@@ -33,6 +34,14 @@ pub fn typecheck_statement<'nodes, 'ctx>(
 				name: decl.pat.ident(),
 				scope: state.scope,
 			};
+			// I seriously wonder what changes I can make that could allow me to effectively push a new scope
+			// to allow variable shadowing
+			if ctx.symtab.variables.get(&symbol).is_some() {
+				return Err(CompilerError::AnyError(format!(
+					"variable {:?} is already declared in this scope",
+					decl.pat.ident()
+				)))?;
+			}
 			ctx.symtab
 				.variables
 				.insert(symbol, (ty, NodeRef::LetDeclaration(decl)));
