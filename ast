@@ -1,5 +1,18 @@
 Program {
     items: [
+        TupleStructDeclaration(
+            TupleStructDeclaration {
+                name: "Coords",
+                fields: [
+                    Identifier(
+                        "number",
+                    ),
+                    Identifier(
+                        "number",
+                    ),
+                ],
+            },
+        ),
         FunctionDeclaration(
             FunctionDeclaration {
                 name: "main",

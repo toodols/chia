@@ -5,17 +5,18 @@ use crate::{
 use super::parse_expression;
 
 pub(in crate::parser) fn parse_literal(parser: &mut Parser) -> Result<Literal, ParseError> {
-	match parser.next_token() {
-		Some(Token::Number) => Ok(Literal::Number(parser.slice_token().parse().unwrap())),
-		Some(Token::True) => Ok(Literal::Boolean(true)),
-		Some(Token::False) => Ok(Literal::Boolean(false)),
-		Some(Token::String) => {
+	let (token, pos) = parser.next_token_with_pos().ok_or(ParseError::UnexpectedEOF)?; // TODO: Better error handling (e.g. UnexpectedEOF
+	match token {
+		Token::Number => Ok(Literal::Number(parser.slice_token().parse().unwrap())),
+		Token::True => Ok(Literal::Boolean(true)),
+		Token::False => Ok(Literal::Boolean(false)),
+		Token::String => {
 			// tokens.slice() will have quotes
 			let text = parser.slice_token();
 			Ok(Literal::String(text[1..text.len() - 1].to_string()))
 		}
-		Some(Token::Error) => Err(ParseError::LexError),
-		Some(Token::LBracket) => {
+		Token::Error => Err(ParseError::LexError),
+		Token::LBracket => {
 			let initial = parse_expression(parser)?;
 			match parser.next_token() {
 				Some(Token::Semicolon) => {
@@ -33,11 +34,10 @@ pub(in crate::parser) fn parse_literal(parser: &mut Parser) -> Result<Literal, P
 					Ok(Literal::Array(t))
 				}
 				Some(Token::RBracket) => Ok(Literal::Array(vec![initial])),
-				Some(t) => Err(ParseError::UnexpectedToken(t)),
+				Some(t) => Err(ParseError::UnexpectedToken{token: t, at: pos}),
 				None => Err(ParseError::UnexpectedEOF),
 			}
 		}
-		Some(t) => Err(ParseError::UnexpectedToken(t)),
-		None => Err(ParseError::UnexpectedEOF),
+		t => Err(ParseError::UnexpectedToken{token: t, at: pos})
 	}
 }

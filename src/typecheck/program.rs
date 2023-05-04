@@ -22,6 +22,7 @@ pub fn typecheck_program<'nodes>(program: &'nodes Program) -> CompilerResult<Con
 						Symbol {
 							name: func.name.clone(),
 							scope: 0,
+							..Default::default()
 						},
 						(
 							Type::Function(
@@ -34,6 +35,9 @@ pub fn typecheck_program<'nodes>(program: &'nodes Program) -> CompilerResult<Con
 							NodeRef::FunctionDeclaration(func),
 						),
 					);
+				}
+				Item::TupleStructDeclaration(decl) => {
+					todo!("Typecheck struct declaration")
 				}
 				_ => todo!("")
 			}

@@ -33,6 +33,7 @@ pub fn typecheck_statement<'nodes, 'ctx>(
 			let symbol = Symbol {
 				name: decl.pat.ident(),
 				scope: state.scope,
+				..Default::default()
 			};
 			// I seriously wonder what changes I can make that could allow me to effectively push a new scope
 			// to allow variable shadowing

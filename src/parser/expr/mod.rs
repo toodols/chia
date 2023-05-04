@@ -19,8 +19,8 @@ mod path;
 
 // Basically expressions that don't rely on operators / precedence and are generally wrapped together nicely
 fn parse_atomic_expression(parser: &mut Parser) -> Result<Expression, ParseError> {
-	match parser.peek_token() {
-		Some(t) => match t {
+	match parser.peek_token_with_pos() {
+		Some((t,pos)) => match t {
 			Token::For | Token::While | Token::Loop => parse_loops(parser),
 			t @ (Token::Break | Token::Return) => {
 				parser.next_token();
@@ -62,7 +62,7 @@ fn parse_atomic_expression(parser: &mut Parser) -> Result<Expression, ParseError
 				parser.expect_token(Token::RParen)?;
 				Ok(expression)
 			}
-			_ => Err(ParseError::UnexpectedToken(t)),
+			_ => Err(ParseError::UnexpectedToken{token: t, at: pos}),
 		},
 		None => Err(ParseError::UnexpectedEOF),
 	}

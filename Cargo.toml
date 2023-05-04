@@ -5,4 +5,5 @@ edition = "2021"
 
 [dependencies]
 logos = "0.12.1"
+thiserror = "1.0.40"
 xml-rs = "0.8.4"
