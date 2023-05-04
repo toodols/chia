@@ -36,8 +36,10 @@ Program {
                                                             IfExpression {
                                                                 condition: BinaryOperation {
                                                                     operator: Equal,
-                                                                    left: Identifier(
-                                                                        "i",
+                                                                    left: Path(
+                                                                        [
+                                                                            "i",
+                                                                        ],
                                                                     ),
                                                                     right: Number(
                                                                         5,

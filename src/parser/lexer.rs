@@ -129,6 +129,10 @@ pub enum Token {
     Mod,
     #[token("return")]
     Return,
+    #[token("enum")]
+    Enum,
+    #[token("struct")]
+    Struct,
 }
 
 impl Token {

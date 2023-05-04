@@ -20,11 +20,11 @@ pub fn typecheck_expression<'nodes, 'ctx>(
 		Expression::Literal(Literal::Number(_)) => Ok(Type::Number.into()),
 		Expression::Literal(Literal::String(_)) => Ok(Type::String.into()),
 		Expression::Literal(Literal::Boolean(_)) => Ok(Type::Boolean.into()),
-		Expression::Literal(Literal::Identifier(name)) => ctx
+		Expression::Path(path) => ctx
 			.symtab
-			.get_variable(state.scope, name.clone())
+			.get_variable(state.scope, path.ident().clone())
 			.map(|t| t.into())
-			.ok_or(CompilerError::VariableNotFound(name.clone())),
+			.ok_or(CompilerError::VariableNotFound(path.ident().clone())),
 		Expression::BinaryOperation(op) => {
 			let TypecheckOutput { ty: left_ty, .. } =
 				typecheck_expression(ctx, state.clone(), &op.left)?;

@@ -14,8 +14,18 @@ pub enum SymbolName {
 }
 
 #[derive(Debug, Clone)]
-pub struct Path(pub Vec<String>);
+pub struct Path(pub Vec<SymbolName>);
+// Paths look like "std::mem::drop"
+// Right now they are just "drop"
+impl Path {
+    // temporary solution so i don't have to deal with actual paths.
+    pub fn ident(&self) -> &SymbolName {
+        &self.0[0]
+    }
+}
 
+// Patterns look like "Some(s)"
+// right now they are just "s"
 #[derive(Clone, Debug)]
 pub enum Pattern {
     Ident(String),
@@ -49,8 +59,8 @@ pub struct FunctionDeclaration {
 #[derive(Debug, Clone)]
 pub enum Item {
     FunctionDeclaration(FunctionDeclaration),
-    TupleStruct(TupleStruct),
-    Struct(Struct),
+    TupleStructDeclaration(TupleStructDeclaration),
+    StructDeclaration(StructDeclaration),
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -202,14 +212,14 @@ pub struct Block {
 }
 
 #[derive(Debug, Clone)]
-pub struct TupleStruct {
+pub struct TupleStructDeclaration {
     pub name: SymbolName,
     pub fields: Vec<TypeExpr>,
 }
 
 
 #[derive(Debug, Clone)]
-pub struct Struct {
+pub struct StructDeclaration {
     pub name: SymbolName,
     pub fields: Vec<(SymbolName, TypeExpr)>,
 }
@@ -232,6 +242,7 @@ pub enum Expression {
     IfExpression(IfExpression),
     Return(Box<Expression>),
     ForLoop(ForLoop),
+    Path(Path),
 }
 impl std::fmt::Debug for Expression {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -246,6 +257,7 @@ impl std::fmt::Debug for Expression {
             Self::ForLoop(arg0) => arg0.fmt(f),
             Self::Break(arg0) => f.debug_tuple("Break").field(arg0).finish(),
             Self::Return(arg0) => f.debug_tuple("Return").field(arg0).finish(),
+            Self::Path(arg0) => arg0.fmt(f),
         }
     }
 }
@@ -296,7 +308,6 @@ pub enum Literal {
     Unit,
     Array(Vec<Expression>),
     ArraySized(Box<Expression>, u32),
-    Identifier(SymbolName),
     Number(i32),
     String(String),
     Boolean(bool),

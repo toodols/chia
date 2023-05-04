@@ -133,20 +133,6 @@ fn parse_fn_call_body(parser: &mut Parser) -> Result<Vec<Expression>, ParseError
     Ok(args)
 }
 
-fn parse_path(parser: &mut Parser) -> Result<Path, ParseError> {
-    let mut path = Vec::new();
-    if parser.peek_token() == Some(Token::Identifier) {
-        parser.next_token();
-        path.push(parser.slice_token().to_owned());
-    }
-    while parser.peek_token() == Some(Token::Scope) {
-        parser.next_token();
-        parser.expect_token(Token::Identifier)?;
-        path.push(parser.slice_token().to_owned());
-    }
-    Ok(Path(path))
-}
-
 fn parse_macro_invocation(parser: &mut Parser) -> Result<Vec<Token>, ParseError> {
     // very simple. all parentheses must be closed, all brackets must be closed, and all braces must be closed
     enum OpenToken {

@@ -14,9 +14,6 @@ pub(in crate::parser) fn parse_literal(parser: &mut Parser) -> Result<Literal, P
 			let text = parser.slice_token();
 			Ok(Literal::String(text[1..text.len() - 1].to_string()))
 		}
-		Some(Token::Identifier) => Ok(Literal::Identifier(SymbolName::External(
-			parser.slice_token().to_owned(),
-		))),
 		Some(Token::Error) => Err(ParseError::LexError),
 		Some(Token::LBracket) => {
 			let initial = parse_expression(parser)?;

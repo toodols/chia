@@ -1,4 +1,5 @@
 use self::if_expr::parse_if_expr;
+use self::path::parse_expr_path;
 use self::{literal::parse_literal, loops::parse_loops};
 
 use super::{
@@ -14,6 +15,7 @@ pub mod block;
 mod if_expr;
 mod literal;
 mod loops;
+mod path;
 
 // Basically expressions that don't rely on operators / precedence and are generally wrapped together nicely
 fn parse_atomic_expression(parser: &mut Parser) -> Result<Expression, ParseError> {
@@ -43,11 +45,11 @@ fn parse_atomic_expression(parser: &mut Parser) -> Result<Expression, ParseError
 				}
 			}
 			Token::If => Ok(Expression::IfExpression(parse_if_expr(parser)?)),
+			Token::Identifier => Ok(Expression::Path(parse_expr_path(parser)?)),
 			Token::Number
 			| Token::True
 			| Token::False
 			| Token::String
-			| Token::Identifier
 			| Token::LBracket => {
 				let literal = parse_literal(parser)?;
 				Ok(Expression::Literal(literal))

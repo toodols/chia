@@ -1,12 +1,9 @@
 Context {
     symtab: Symtab {
         variables: {
-            main@0: (
-                Function(
-                    [],
-                    String,
-                ),
-                FunctionDeclaration("main"),
+            should_be_never@2: (
+                Never,
+                LetDeclaration("should_be_never"),
             ),
             a@1: (
                 Number,
@@ -16,16 +13,19 @@ Context {
                 Number,
                 ForLoop("i"),
             ),
-            should_be_never@2: (
-                Never,
-                LetDeclaration("should_be_never"),
+            main@0: (
+                Function(
+                    [],
+                    String,
+                ),
+                FunctionDeclaration("main"),
             ),
         },
         types: {},
         parents: {
-            3: 2,
-            1: 0,
             4: 2,
+            1: 0,
+            3: 2,
             2: 1,
         },
     },
