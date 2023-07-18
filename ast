@@ -2,6 +2,27 @@ Program {
     items: [
         FunctionDeclaration(
             FunctionDeclaration {
+                name: "print",
+                parameters: [
+                    (
+                        Ident(
+                            "value",
+                        ),
+                        Identifier(
+                            "number",
+                        ),
+                    ),
+                ],
+                body: Block {
+                    statements: [],
+                    does_return: false,
+                    node_id: 1,
+                },
+                return_type: Unit,
+            },
+        ),
+        FunctionDeclaration(
+            FunctionDeclaration {
                 name: "main",
                 parameters: [],
                 body: Block {
@@ -9,37 +30,68 @@ Program {
                         LetDeclaration(
                             LetDeclaration {
                                 pat: Ident(
-                                    "a",
+                                    "my_number",
                                 ),
                                 value: Some(
                                     Number(
                                         1,
                                     ),
                                 ),
+                                node_id: 3,
                             },
                         ),
                         LetDeclaration(
                             LetDeclaration {
                                 pat: Ident(
-                                    "a",
+                                    "something",
+                                ),
+                                value: Some(
+                                    String(
+                                        "abcdef",
+                                    ),
+                                ),
+                                node_id: 4,
+                            },
+                        ),
+                        LetDeclaration(
+                            LetDeclaration {
+                                pat: Ident(
+                                    "something",
                                 ),
                                 value: Some(
                                     Number(
-                                        2,
+                                        123,
                                     ),
                                 ),
+                                node_id: 5,
+                            },
+                        ),
+                        Expression(
+                            FunctionCall {
+                                value: Path(
+                                    [
+                                        "print",
+                                    ],
+                                ),
+                                arguments: [
+                                    Path(
+                                        [
+                                            "something",
+                                        ],
+                                    ),
+                                ],
                             },
                         ),
                         Expression(
                             Path(
                                 [
-                                    "a",
+                                    "my_number",
                                 ],
                             ),
                         ),
                     ],
                     does_return: true,
-                    node_id: 1,
+                    node_id: 2,
                 },
                 return_type: Identifier(
                     "number",

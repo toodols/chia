@@ -7,7 +7,7 @@ mod struct_decl;
 pub(in crate::parser) fn parse_item(parser: &mut Parser) -> Result<Item, ParseError> {
     match parser.peek_token() {
         Some(Token::Fn) => Ok(Item::FunctionDeclaration(parse_fn_declaration(parser)?)),
-		Some(Token::Struct) => Ok(parse_struct_declaration(parser)?),
+        Some(Token::Struct) => Ok(parse_struct_declaration(parser)?),
         Some(Token::Error) => Err(ParseError::LexError),
         Some(t) => Err(ParseError::UnexpectedToken(t)),
         None => Err(ParseError::UnexpectedEOF),

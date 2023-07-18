@@ -1,8 +1,28 @@
-/**
- * Comments :D
- */
+fn print(value: number) -> () {}
+
 fn main() -> number {
-	let a = 1;
-	let a = 2;
-	a
+	let my_number = 1;
+	let something = "abcdef";
+	let something = 123;
+	print(something);
+	my_number
 }
+
+/*
+0 (program): {
+	1 (fn print) {
+		var value: number
+	}
+	2 (fn main) {
+		var my_number: number
+		var something: string
+		
+		3 (let something) {
+			var something: number
+
+			<end of fn main>
+		}
+	}
+}
+
+*/

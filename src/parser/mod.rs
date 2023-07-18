@@ -16,7 +16,7 @@ struct Tokens<'a> {
 }
 
 impl<'a> Tokens<'a> {
-    fn new<'source>(source: &'source str) -> Tokens<'source> {
+    fn new(source: &str) -> Tokens<'_> {
         let tokens = Token::lexer(source);
         Tokens {
             tokens,
@@ -24,7 +24,7 @@ impl<'a> Tokens<'a> {
         }
     }
     fn peek_token(&mut self) -> Option<Token> {
-        if self.peeked == None {
+        if self.peeked.is_none() {
             if let Some(token) = self.tokens.next() {
                 // weird
                 return Some(*self.peeked.insert(token));
@@ -34,7 +34,7 @@ impl<'a> Tokens<'a> {
     }
     fn next_token(&mut self) -> Option<Token> {
         let token = self.peeked.take();
-        if token == None {
+        if token.is_none() {
             self.tokens.next()
         } else {
             token
@@ -97,6 +97,7 @@ impl<'a> Parser<'a> {
             tokens: Tokens::new(source),
         }
     }
+    /// Gives a unique node id
     fn node_id(&mut self) -> usize {
         let id = self.node_id_counter;
         self.node_id_counter += 1;
@@ -113,7 +114,7 @@ fn parse_fn_call_body(parser: &mut Parser) -> Result<Vec<Expression>, ParseError
                 break;
             }
             Some(Token::Error) => return Err(ParseError::LexError),
-            Some(t) => {
+            Some(_) => {
                 args.push(parse_expression(parser)?);
                 match parser.peek_token() {
                     Some(Token::Comma) => {
@@ -133,6 +134,7 @@ fn parse_fn_call_body(parser: &mut Parser) -> Result<Vec<Expression>, ParseError
     Ok(args)
 }
 
+#[allow(unused)]
 fn parse_macro_invocation(parser: &mut Parser) -> Result<Vec<Token>, ParseError> {
     // very simple. all parentheses must be closed, all brackets must be closed, and all braces must be closed
     enum OpenToken {
@@ -156,11 +158,11 @@ fn parse_macro_invocation(parser: &mut Parser) -> Result<Vec<Token>, ParseError>
         let tok = parser.next_token().ok_or(ParseError::UnexpectedEOF)?;
         match tok {
             Token::LParen | Token::LBracket | Token::LBrace => {
-                stack.push(tok.into());
+                stack.push(tok);
             }
             Token::RParen | Token::RBracket | Token::RBrace => {
                 let open = stack.pop().ok_or(ParseError::UnexpectedToken(tok))?;
-                if open != tok.into() {
+                if open != tok {
                     return Err(ParseError::UnexpectedToken(tok));
                 }
             }
@@ -168,7 +170,7 @@ fn parse_macro_invocation(parser: &mut Parser) -> Result<Vec<Token>, ParseError>
             _ => {}
         }
         matched.push(tok);
-        if stack.len() == 0 {
+        if stack.is_empty() {
             break;
         }
     }
@@ -188,10 +190,11 @@ fn parse_let_declaration(parser: &mut Parser) -> Result<LetDeclaration, ParseErr
         Ok(LetDeclaration {
             pat,
             value: Some(value),
+            node_id: parser.node_id(),
         })
     } else {
         parser.expect_token(Token::Semicolon)?;
-        Ok(LetDeclaration { pat, value: None })
+        Ok(LetDeclaration { pat, value: None, node_id: parser.node_id() })
     }
 }
 
@@ -226,7 +229,7 @@ fn parse_type(parser: &mut Parser) -> Result<TypeExpr, ParseError> {
 fn parse_program(parser: &mut Parser) -> Result<Program, ParseError> {
     let node_id = parser.node_id();
     let mut items = Vec::new();
-    while let Some(_) = parser.peek_token() {
+    while parser.peek_token().is_some() {
         items.push(parse_item(parser)?);
     }
     println!("finished parsing");

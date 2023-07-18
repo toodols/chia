@@ -1,10 +1,6 @@
 Context {
     symtab: Symtab {
         variables: {
-            a@1: (
-                Number,
-                LetDeclaration("a"),
-            ),
             main@0: (
                 Function(
                     [],
@@ -12,10 +8,61 @@ Context {
                 ),
                 FunctionDeclaration("main"),
             ),
+            my_number@2: (
+                Number,
+                LetDeclaration("my_number"),
+            ),
+            value@1: (
+                Number,
+                FunctionDeclaration("print"),
+            ),
+            something@2: (
+                String,
+                LetDeclaration("something"),
+            ),
+            something@3: (
+                Number,
+                LetDeclaration("something"),
+            ),
+            print@0: (
+                Function(
+                    [
+                        Number,
+                    ],
+                    Unit,
+                ),
+                FunctionDeclaration("print"),
+            ),
         },
         types: {},
         parents: {
-            1: 0,
+            ScopeId(
+                1,
+            ): ScopeId(
+                0,
+            ),
+            ScopeId(
+                2,
+            ): ScopeId(
+                0,
+            ),
+            ScopeId(
+                3,
+            ): ScopeId(
+                2,
+            ),
         },
     },
+    scopes_by_node_id: {
+        2: ScopeId(
+            2,
+        ),
+        5: ScopeId(
+            3,
+        ),
+        1: ScopeId(
+            1,
+        ),
+    },
+    scope_counter: 4,
 }

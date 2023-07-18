@@ -52,7 +52,7 @@ pub(in crate::parser) fn parse_block(parser: &mut Parser) -> Result<Block, Parse
                     })
                 }
                 Some(Token::Error) => Err(ParseError::LexError),
-                Some(t) => {
+                Some(_) => {
                     let expr = parse_expression(parser)?;
                     let mut terminating = expr.terminating();
                     let mut did_close = false;

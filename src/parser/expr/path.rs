@@ -1,4 +1,8 @@
-use crate::parser::{Parser, ast::{Path, SymbolName}, ParseError, lexer::Token};
+use crate::parser::{
+    ast::{Path, SymbolName},
+    lexer::Token,
+    ParseError, Parser,
+};
 
 pub(in crate::parser) fn parse_expr_path(parser: &mut Parser) -> Result<Path, ParseError> {
     let mut path = Vec::new();
@@ -11,5 +15,5 @@ pub(in crate::parser) fn parse_expr_path(parser: &mut Parser) -> Result<Path, Pa
         parser.expect_token(Token::Identifier)?;
         path.push(parser.slice_token().to_owned());
     }
-    Ok(Path(path.into_iter().map(|s| SymbolName::External(s)).collect()))
+    Ok(Path(path.into_iter().map(SymbolName::External).collect()))
 }

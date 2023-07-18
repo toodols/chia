@@ -1,16 +1,14 @@
-
 use super::lexer::Token;
 
-struct Node<T> {
-    value: T,
-    // span: Span,
-}
-
+// struct Node<T> {
+//     value: T,
+//     // span: Span,
+// }
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub enum SymbolName {
-	External(String),
-	Internal(usize),
+    External(String),
+    Internal(usize),
 }
 
 #[derive(Debug, Clone)]
@@ -27,6 +25,7 @@ impl Path {
 // Patterns look like "Some(s)"
 // right now they are just "s"
 #[derive(Clone, Debug)]
+#[non_exhaustive]
 pub enum Pattern {
     Ident(String),
 }
@@ -217,7 +216,6 @@ pub struct TupleStructDeclaration {
     pub fields: Vec<TypeExpr>,
 }
 
-
 #[derive(Debug, Clone)]
 pub struct StructDeclaration {
     pub name: SymbolName,
@@ -277,10 +275,7 @@ pub struct IfExpression {
 
 impl Expression {
     pub fn terminating(&self) -> bool {
-        match self {
-            Expression::IfExpression(_) => true,
-            _ => false,
-        }
+        matches!(self, Expression::IfExpression(_))
     }
 }
 
@@ -288,6 +283,7 @@ impl Expression {
 pub struct LetDeclaration {
     pub pat: Pattern,
     pub value: Option<Expression>,
+    pub node_id: usize,
 }
 
 #[derive(Debug, Clone)]
