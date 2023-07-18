@@ -1,17 +1,8 @@
 Context {
     symtab: Symtab {
         variables: {
-            something@3: (
+            value@1: (
                 Number,
-                LetDeclaration("something"),
-            ),
-            print@0: (
-                Function(
-                    [
-                        Number,
-                    ],
-                    Unit,
-                ),
                 FunctionDeclaration("print"),
             ),
             main@0: (
@@ -29,14 +20,28 @@ Context {
                 String,
                 LetDeclaration("something"),
             ),
-            value@1: (
+            something@3: (
                 Number,
+                LetDeclaration("something"),
+            ),
+            print@0: (
+                Function(
+                    [
+                        Number,
+                    ],
+                    Unit,
+                ),
                 FunctionDeclaration("print"),
             ),
         },
         types: {},
         structs: {},
         parents: {
+            ScopeId(
+                3,
+            ): ScopeId(
+                2,
+            ),
             ScopeId(
                 1,
             ): ScopeId(
@@ -47,22 +52,17 @@ Context {
             ): ScopeId(
                 0,
             ),
-            ScopeId(
-                3,
-            ): ScopeId(
-                2,
-            ),
         },
     },
     scopes_by_node_id: {
         1: ScopeId(
             1,
         ),
-        2: ScopeId(
-            2,
-        ),
         5: ScopeId(
             3,
+        ),
+        2: ScopeId(
+            2,
         ),
     },
     scope_counter: 4,

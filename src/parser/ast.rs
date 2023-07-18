@@ -11,6 +11,15 @@ pub enum SymbolName {
     Internal(usize),
 }
 
+impl SymbolName {
+    pub fn ident(&self) -> String {
+        match self {
+            SymbolName::External(s) => s.clone(),
+            SymbolName::Internal(s) => format!("_{s}"),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Path(pub Vec<SymbolName>);
 // Paths look like "std::mem::drop"

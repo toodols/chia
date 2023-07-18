@@ -20,7 +20,7 @@ pub fn typecheck_expression<'nodes, 'ctx>(
         Expression::Literal(Literal::Boolean(_)) => Ok(Type::Boolean.into()),
         Expression::Path(path) => ctx
             .symtab
-            .get_variable(state.scope, path.ident().clone())
+            .get_variable(state.scope, path.ident())
             .map(|t| t.into())
             .ok_or_else(|| CompilerError::VariableNotFound(path.ident().clone())),
         Expression::BinaryOperation(op) => {

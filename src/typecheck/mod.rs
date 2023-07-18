@@ -27,6 +27,12 @@ pub struct Symbol {
     pub scope: ScopeId,
 }
 
+impl Symbol {
+    pub fn ident(&self) -> String {
+        format!("{}_{}", self.name.ident(), self.scope)
+    }
+}
+
 impl Default for Symbol {
     fn default() -> Self {
         Self {
@@ -100,7 +106,7 @@ impl Type {
     }
 }
 
-enum NodeRef<'a> {
+pub enum NodeRef<'a> {
     FunctionDeclaration(&'a FunctionDeclaration),
     LetDeclaration(&'a LetDeclaration),
     ForLoop(&'a ForLoop),
@@ -150,10 +156,10 @@ let instance = S {s: 1};
 
 #[derive(Debug)]
 pub struct Symtab<'a> {
-    variables: HashMap<Symbol, (Type, NodeRef<'a>)>,
-    types: HashMap<Symbol, (Type, NodeRef<'a>)>,
-    structs: HashMap<Symbol, (Type, NodeRef<'a>)>,
-    parents: HashMap<ScopeId, ScopeId>,
+    pub variables: HashMap<Symbol, (Type, NodeRef<'a>)>,
+    pub types: HashMap<Symbol, (Type, NodeRef<'a>)>,
+    pub structs: HashMap<Symbol, (Type, NodeRef<'a>)>,
+    pub parents: HashMap<ScopeId, ScopeId>,
 }
 
 impl<'a> Symtab<'a> {
@@ -165,14 +171,15 @@ impl<'a> Symtab<'a> {
             parents: HashMap::new(),
         }
     }
-    fn get_variable(&self, mut scope: ScopeId, name: SymbolName) -> Option<Type> {
+    pub fn get_variable_symbol(&self, mut scope: ScopeId, name: &SymbolName) -> Option<Symbol> {
         loop {
-            if let Some((ty, _)) = self.variables.get(&Symbol {
+            let sym = Symbol {
                 name: name.clone(),
                 scope,
                 ..Default::default()
-            }) {
-                return Some(ty.clone());
+            };
+            if self.variables.contains_key(&sym) {
+                return Some(sym);
             } else if let Some(parent) = self.parents.get(&scope) {
                 scope = *parent;
             } else {
@@ -180,7 +187,10 @@ impl<'a> Symtab<'a> {
             }
         }
     }
-    fn get_type(&self, scope: ScopeId, expr: &TypeExpr) -> Type {
+    pub fn get_variable(&self, scope: ScopeId, name: &SymbolName) -> Option<Type> {
+        self.get_variable_symbol(scope, name).map(|sym|self.variables.get(&sym).unwrap().0.clone())
+    }
+    pub fn get_type(&self, scope: ScopeId, expr: &TypeExpr) -> Type {
         // ScopeId(0) is the global scope
         if scope == ScopeId(0) {
             match expr {
@@ -196,7 +206,7 @@ impl<'a> Symtab<'a> {
                 _ => panic!(),
             }
         }
-        panic!()
+        todo!("getting types for not global scope")
     }
 }
 
@@ -251,7 +261,7 @@ impl<'a> Context<'a> {
             scope_counter: 0,
         }
     }
-    fn iter_item_ty(&self, ty: Type) -> Option<Type> {
+    pub fn iter_item_ty(&self, ty: Type) -> Option<Type> {
         match ty {
             Type::Range => Some(Type::Number),
             _ => None,
@@ -261,6 +271,9 @@ impl<'a> Context<'a> {
         let s = self.scope_counter;
         self.scope_counter += 1;
         return ScopeId(s);
+    }
+    pub fn get_scope_immut(&self, node_id: usize) -> Option<ScopeId> {
+        self.scopes_by_node_id.get(&node_id).map(|e|*e)
     }
     fn get_scope_from_node_id(&mut self, node_id: usize) -> ScopeId {
         self.scopes_by_node_id
