@@ -56,6 +56,7 @@ pub fn typecheck_statement<'nodes, 'ctx>(
             let symbol = Symbol {
                 name: decl.pat.ident(),
                 scope: state.scope,
+				..Default::default()
             };
 
             // does the symbol already exist in the current scope?
@@ -69,7 +70,8 @@ pub fn typecheck_statement<'nodes, 'ctx>(
                         .variables
                         .insert(Symbol {
 							name,
-							scope: new_scope
+							scope: new_scope,
+							..Default::default()
 						}, (ty, NodeRef::LetDeclaration(decl)));
 					Some(new_scope)
                 }

@@ -23,12 +23,37 @@ impl Debug for SymbolName {
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Symbol {
     pub name: SymbolName,
+	pub field_of: Option<Box<Symbol>>,
     pub scope: ScopeId,
 }
 
+impl Default for Symbol {
+	fn default() -> Self {
+		Self {
+			name: SymbolName::Internal(0),
+			field_of: None,
+			scope: ScopeId(0),
+		}
+	}
+}
+
+/*
+	struct A;
+	type B = A;
+	fn e(){
+		let a = A; // a can be constructed with A
+		let b = B; // but not b because B is a type alias
+		// which indicates that they are stored differently despite both being types
+		// i think this means that A will have a type entry and a struct entry??
+	}
+*/
+
 impl Debug for Symbol {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let Symbol { name, scope } = self;
+        let Symbol { name, scope, field_of } = self;
+		if let Some(field_of) = field_of {
+			write!(f, "{:?}", field_of);
+		}
         match name {
             SymbolName::External(name) => write!(f, "{}@{}", name, scope),
             SymbolName::Internal(id) => write!(f, "{}@{}", id, scope),
@@ -87,19 +112,43 @@ impl<'a> Debug for NodeRef<'a> {
 }
 
 /*
-HOW EXPRESSIONS SHOULD BE TRANSLATED
 
 let a = 1
-Symtab {variables: { a@0: (Number, LetDeclaration(a)) }}
+Symtab {variables: { a@0: (Number, LetDeclaration) }}
+
+fn foo(param: string) {
+	let f = 1;
+}
+Symtab {variables: {
+	foo@0: (Function([String])->Unit, FnDeclaration),
+	f@1: (Number, LetDeclaration),
+}}
 
 struct Vec3 { x: number, y: number, z: number }
-Symtab { types: { Vec3@0: (Symbol(Vec3@0), StructDeclaration(Vec3)) } }
+Symtab {
+	types: {
+		Vec3@0: (Symbol(Vec3@0), StructDeclaration)
+		Vec3::x@0: (Number, StructDeclaration),
+		Vec3::y@0: (Number, StructDeclaration),
+		Vec3::z@0: (Number, StructDeclaration),
+	},
+	structs: {
+		Vec3@0: (Symbol(Vec3@0), StructDeclaration)
+	}
+}
+
+type C = number;
+Symtab { types: { C@0: (Number, TypeAlias) } }
+
+let instance = S {s: 1};
+
 */
 
 #[derive(Debug)]
 pub struct Symtab<'a> {
     variables: HashMap<Symbol, (Type, NodeRef<'a>)>,
     types: HashMap<Symbol, (Type, NodeRef<'a>)>,
+	structs: HashMap<Symbol, (Type, NodeRef<'a>)>,
     parents: HashMap<ScopeId, ScopeId>,
 }
 
@@ -108,6 +157,7 @@ impl<'a> Symtab<'a> {
         Symtab {
             variables: HashMap::new(),
             types: HashMap::new(),
+			structs: HashMap::new(),
             parents: HashMap::new(),
         }
     }
@@ -116,6 +166,7 @@ impl<'a> Symtab<'a> {
             if let Some((ty, _)) = self.variables.get(&Symbol {
                 name: name.clone(),
                 scope,
+				..Default::default()
             }) {
                 return Some(ty.clone());
             } else if let Some(parent) = self.parents.get(&scope) {

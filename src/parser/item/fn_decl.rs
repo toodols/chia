@@ -27,8 +27,10 @@ pub(super) fn parse_fn_declaration(parser: &mut Parser) -> Result<FunctionDeclar
 
     let params = match parser.peek_token() {
         Some(Token::LParen) => parse_fn_params(parser)?,
-        // Some(Token::Arrow) => vec![], // Allows `fn foo {}` syntax in contrast to `fn foo() {}` always required
-        Some(Token::LBrace) => vec![],
+        
+        // Allows `fn foo {}` syntax in contrast to `fn foo() {}` always required
+        // Some(Token::Arrow) => vec![],
+        // Some(Token::LBrace) => vec![],
         _ => {
             return Err(ParseError::Unknown);
         }

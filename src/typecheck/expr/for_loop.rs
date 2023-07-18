@@ -34,6 +34,7 @@ pub fn typecheck_for_loop<'nodes, 'ctx>(
         Symbol {
             name: expr.pat.ident(),
             scope: inner_scope,
+			..Default::default()
         },
         (iter_item_ty, NodeRef::ForLoop(expr)),
     );

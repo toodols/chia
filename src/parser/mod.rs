@@ -3,16 +3,19 @@ mod expr;
 mod item;
 
 mod lexer;
+use std::ops::Range;
+
 use ast::*;
 use lexer::Token;
 use logos::Logos;
+use thiserror::Error;
 
 use self::expr::parse_expression;
 use self::item::parse_item;
 
 struct Tokens<'a> {
     tokens: logos::Lexer<'a, Token>,
-    peeked: Option<Token>,
+    peeked: Option<(Token, SourceLocation)>,
 }
 
 impl<'a> Tokens<'a> {
@@ -23,19 +26,24 @@ impl<'a> Tokens<'a> {
             peeked: None,
         }
     }
-    fn peek_token(&mut self) -> Option<Token> {
+    fn peek_token_with_pos(&mut self) -> Option<(Token, SourceLocation)> {
         if self.peeked.is_none() {
             if let Some(token) = self.tokens.next() {
-                // weird
-                return Some(*self.peeked.insert(token));
+                return Some(
+                    self.peeked.insert((token, SourceLocation::range(self.tokens.span()))).clone()
+                );
+            } else {
+                return None;
             }
         }
-        self.peeked
+        self.peeked.clone()
     }
-    fn next_token(&mut self) -> Option<Token> {
+    fn next_token_with_pos(&mut self) -> Option<(Token, SourceLocation)> {
         let token = self.peeked.take();
         if token.is_none() {
-            self.tokens.next()
+            self.tokens.next().map(|token| {
+                (token, SourceLocation::range(self.tokens.span()))
+            })
         } else {
             token
         }
@@ -43,10 +51,10 @@ impl<'a> Tokens<'a> {
     /// Expects the next token to be {token} and errors otherwise;
     fn expect_token(&mut self, token: Token) -> Result<&str, ParseError> {
         // thank you, copilot
-        let t = match self.next_token() {
-            Some(Token::Error) => Err(ParseError::LexError),
-            Some(t) if t == token => Ok(self.tokens.slice()),
-            Some(t) => Err(ParseError::UnexpectedToken(t)),
+        let t = match self.next_token_with_pos() {
+            Some((Token::Error, _)) => Err(ParseError::LexError),
+            Some((t, _)) if t == token => Ok(self.tokens.slice()),
+            Some((t,pos)) => Err(ParseError::UnexpectedToken{token: t, at: pos}),
             None => Err(ParseError::UnexpectedEOF),
         };
         t
@@ -64,12 +72,27 @@ impl<'a> Tokens<'a> {
     // }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
+pub struct SourceLocation {
+    range: Range<usize>,
+}
+impl SourceLocation {
+    fn range(range: Range<usize>) -> SourceLocation {
+        SourceLocation { range }
+    }
+}
+
+#[derive(Error, Debug)]
 pub enum ParseError {
+    #[error("Unknown error")]
     Unknown,
+    #[error("Lex error")]
     LexError,
+    #[error("Unexpected EOF")]
     UnexpectedEOF,
-    UnexpectedToken(Token),
+    #[error("Unexpected token {token:?} at {at:?}")]
+    UnexpectedToken{token: Token, at: SourceLocation},
+    #[error("{0}")]
     Message(String),
 }
 
@@ -80,10 +103,16 @@ struct Parser<'a> {
 
 impl<'a> Parser<'a> {
     fn next_token(&mut self) -> Option<Token> {
-        self.tokens.next_token()
+        self.tokens.next_token_with_pos().map(|(t, _)| t)
+    }
+    fn next_token_with_pos(&mut self) -> Option<(Token, SourceLocation)> {
+        self.tokens.next_token_with_pos()
     }
     fn peek_token(&mut self) -> Option<Token> {
-        self.tokens.peek_token()
+        self.tokens.peek_token_with_pos().map(|(t, _)| t)
+    }
+    fn peek_token_with_pos(&mut self) -> Option<(Token, SourceLocation)> {
+        self.tokens.peek_token_with_pos()
     }
     fn slice_token(&self) -> &str {
         self.tokens.slice_token()
@@ -116,14 +145,14 @@ fn parse_fn_call_body(parser: &mut Parser) -> Result<Vec<Expression>, ParseError
             Some(Token::Error) => return Err(ParseError::LexError),
             Some(_) => {
                 args.push(parse_expression(parser)?);
-                match parser.peek_token() {
-                    Some(Token::Comma) => {
+                match parser.peek_token_with_pos() {
+                    Some((Token::Comma, _)) => {
                         parser.next_token();
                     }
-                    Some(Token::RParen) => {
+                    Some((Token::RParen, _)) => {
                         break;
                     }
-                    Some(t) => return Err(ParseError::UnexpectedToken(t)),
+                    Some((t,pos)) => return Err(ParseError::UnexpectedToken{token: t, at: pos}),
                     None => return Err(ParseError::UnexpectedEOF),
                 };
             }
@@ -137,6 +166,7 @@ fn parse_fn_call_body(parser: &mut Parser) -> Result<Vec<Expression>, ParseError
 #[allow(unused)]
 fn parse_macro_invocation(parser: &mut Parser) -> Result<Vec<Token>, ParseError> {
     // very simple. all parentheses must be closed, all brackets must be closed, and all braces must be closed
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     enum OpenToken {
         Brace,
         Paren,
@@ -155,15 +185,20 @@ fn parse_macro_invocation(parser: &mut Parser) -> Result<Vec<Token>, ParseError>
     let mut stack: Vec<Token> = Vec::new();
     let mut matched: Vec<Token> = Vec::new();
     loop {
-        let tok = parser.next_token().ok_or(ParseError::UnexpectedEOF)?;
+        let (tok, pos) = parser.next_token_with_pos().ok_or(ParseError::UnexpectedEOF)?;
         match tok {
             Token::LParen | Token::LBracket | Token::LBrace => {
                 stack.push(tok);
+                stack.push(tok);
             }
             Token::RParen | Token::RBracket | Token::RBrace => {
-                let open = stack.pop().ok_or(ParseError::UnexpectedToken(tok))?;
-                if open != tok {
-                    return Err(ParseError::UnexpectedToken(tok));
+                match stack.pop() {
+                    Some(top) => {
+                        if OpenToken::from(top) != OpenToken::from(tok) {
+                            return Err(ParseError::UnexpectedToken{token: tok, at: pos});
+                        }
+                    }
+                    None => return Err(ParseError::UnexpectedToken{token: tok, at: pos}),
                 }
             }
             Token::Error => return Err(ParseError::LexError),
@@ -204,9 +239,9 @@ fn parse_pattern(parser: &mut Parser) -> Result<Pattern, ParseError> {
 }
 
 fn parse_type(parser: &mut Parser) -> Result<TypeExpr, ParseError> {
-    match parser.next_token() {
-        Some(Token::Identifier) => Ok(TypeExpr::Identifier(parser.slice_token().to_owned())),
-        Some(Token::LParen) => {
+    match parser.next_token_with_pos() {
+        Some((Token::Identifier, _)) => Ok(TypeExpr::Identifier(parser.slice_token().to_owned())),
+        Some((Token::LParen, _)) => {
             if parser.peek_token() == Some(Token::RParen) {
                 parser.next_token();
                 return Ok(TypeExpr::Unit);
@@ -220,8 +255,8 @@ fn parse_type(parser: &mut Parser) -> Result<TypeExpr, ParseError> {
             parser.expect_token(Token::RParen)?;
             Ok(TypeExpr::Tuple(types))
         }
-        Some(Token::Error) => Err(ParseError::LexError),
-        Some(t) => Err(ParseError::UnexpectedToken(t)),
+        Some((Token::Error, _)) => Err(ParseError::LexError),
+        Some((t,pos)) => Err(ParseError::UnexpectedToken{token: t, at: pos}),
         None => Err(ParseError::UnexpectedEOF),
     }
 }

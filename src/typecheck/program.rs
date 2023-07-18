@@ -21,6 +21,7 @@ pub fn typecheck_program(program: &Program) -> CompilerResult<Context<'_>> {
                         Symbol {
                             name: func.name.clone(),
                             scope: global_scope,
+							..Default::default()
                         },
                         (
                             Type::Function(
@@ -36,6 +37,9 @@ pub fn typecheck_program(program: &Program) -> CompilerResult<Context<'_>> {
                         ),
                     );
                 }
+				Item::TupleStructDeclaration(decl) => {
+					todo!("Typecheck struct declaration")
+				}
                 _ => todo!(""),
             }
         }
