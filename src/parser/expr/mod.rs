@@ -19,53 +19,49 @@ mod path;
 
 // Basically expressions that don't rely on operators / precedence and are generally wrapped together nicely
 fn parse_atomic_expression(parser: &mut Parser) -> Result<Expression, ParseError> {
-	match parser.peek_token_with_pos() {
-		Some((t,pos)) => match t {
-			Token::For | Token::While | Token::Loop => parse_loops(parser),
-			t @ (Token::Break | Token::Return) => {
-				parser.next_token();
-				// if self.peek_token() == Some(Token::Semicolon) {
-				//     // self.next_token();
-				//     return Ok(Expression::Return(Box::new(Expression::Literal(
-				//         Literal::Unit
-				//     ))));
-				// }
+    match parser.peek_token_with_pos() {
+        Some((t, pos)) => match t {
+            Token::For | Token::While | Token::Loop => parse_loops(parser),
+            t @ (Token::Break | Token::Return) => {
+                parser.next_token();
+                // if self.peek_token() == Some(Token::Semicolon) {
+                //     // self.next_token();
+                //     return Ok(Expression::Return(Box::new(Expression::Literal(
+                //         Literal::Unit
+                //     ))));
+                // }
 
-				let inner = Box::new(match parser.peek_token() {
-					Some(t) if t.is_expression_start() => {
-						let expr = parse_expression(parser)?;
-						expr
-					}
-					_ => Expression::Literal(Literal::Unit),
-				});
-				match t {
-					Token::Break => Ok(Expression::Break(inner)),
-					Token::Return => Ok(Expression::Return(inner)),
-					_ => unreachable!(),
-				}
-			}
-			Token::If => Ok(Expression::IfExpression(parse_if_expr(parser)?)),
-			Token::Identifier => Ok(Expression::Path(parse_expr_path(parser)?)),
-			Token::Number
-			| Token::True
-			| Token::False
-			| Token::String
-			| Token::LBracket => {
-				let literal = parse_literal(parser)?;
-				Ok(Expression::Literal(literal))
-			}
-			Token::LParen => {
-				// a * (b + c)
-				// b + c is evaluated first
-				parser.expect_token(Token::LParen)?;
-				let expression = parse_expression(parser)?;
-				parser.expect_token(Token::RParen)?;
-				Ok(expression)
-			}
-			_ => Err(ParseError::UnexpectedToken{token: t, at: pos}),
-		},
-		None => Err(ParseError::UnexpectedEOF),
-	}
+                let inner = Box::new(match parser.peek_token() {
+                    Some(t) if t.is_expression_start() => {
+                        let expr = parse_expression(parser)?;
+                        expr
+                    }
+                    _ => Expression::Literal(Literal::Unit),
+                });
+                match t {
+                    Token::Break => Ok(Expression::Break(inner)),
+                    Token::Return => Ok(Expression::Return(inner)),
+                    _ => unreachable!(),
+                }
+            }
+            Token::If => Ok(Expression::IfExpression(parse_if_expr(parser)?)),
+            Token::Identifier => Ok(Expression::Path(parse_expr_path(parser)?)),
+            Token::Number | Token::True | Token::False | Token::String | Token::LBracket => {
+                let literal = parse_literal(parser)?;
+                Ok(Expression::Literal(literal))
+            }
+            Token::LParen => {
+                // a * (b + c)
+                // b + c is evaluated first
+                parser.expect_token(Token::LParen)?;
+                let expression = parse_expression(parser)?;
+                parser.expect_token(Token::RParen)?;
+                Ok(expression)
+            }
+            _ => Err(ParseError::UnexpectedToken { token: t, at: pos }),
+        },
+        None => Err(ParseError::UnexpectedEOF),
+    }
 }
 
 pub(in crate::parser) fn parse_expression(parser: &mut Parser) -> Result<Expression, ParseError> {

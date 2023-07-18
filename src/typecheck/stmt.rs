@@ -1,8 +1,8 @@
 use crate::parser::ast::Statement;
 
 use super::{
-    typecheck_expression, CompilerError, CompilerResult, Context, NodeRef, State, Symbol, Type,
-    TypecheckOutput, ScopeId,
+    typecheck_expression, CompilerError, CompilerResult, Context, NodeRef, ScopeId, State, Symbol,
+    Type, TypecheckOutput,
 };
 
 pub struct TckStmtOutput {
@@ -56,24 +56,25 @@ pub fn typecheck_statement<'nodes, 'ctx>(
             let symbol = Symbol {
                 name: decl.pat.ident(),
                 scope: state.scope,
-				..Default::default()
+                ..Default::default()
             };
 
             // does the symbol already exist in the current scope?
             let shadowed = match ctx.symtab.variables.get(&symbol) {
                 // add a new scope and continue from there
                 Some(_) => {
-					let new_scope = ctx.get_scope_from_node_id(decl.node_id);
+                    let new_scope = ctx.get_scope_from_node_id(decl.node_id);
                     ctx.symtab.parents.insert(new_scope, state.scope);
-                    let Symbol {name, ..} = symbol;
-					ctx.symtab
-                        .variables
-                        .insert(Symbol {
-							name,
-							scope: new_scope,
-							..Default::default()
-						}, (ty, NodeRef::LetDeclaration(decl)));
-					Some(new_scope)
+                    let Symbol { name, .. } = symbol;
+                    ctx.symtab.variables.insert(
+                        Symbol {
+                            name,
+                            scope: new_scope,
+                            ..Default::default()
+                        },
+                        (ty, NodeRef::LetDeclaration(decl)),
+                    );
+                    Some(new_scope)
                 }
                 // add variable to scope, do nothing
                 None => {

@@ -27,7 +27,7 @@ pub(super) fn parse_fn_declaration(parser: &mut Parser) -> Result<FunctionDeclar
 
     let params = match parser.peek_token() {
         Some(Token::LParen) => parse_fn_params(parser)?,
-        
+
         // Allows `fn foo {}` syntax in contrast to `fn foo() {}` always required
         // Some(Token::Arrow) => vec![],
         // Some(Token::LBrace) => vec![],

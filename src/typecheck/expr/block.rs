@@ -36,9 +36,9 @@ pub fn typecheck_block<'nodes, 'ctx>(
                 },
             shadowed,
         } = typecheck_statement(ctx, state.clone(), stmt)?;
-		if let Some(shadowed_scope) = shadowed {
-			state.scope = shadowed_scope;
-		}
+        if let Some(shadowed_scope) = shadowed {
+            state.scope = shadowed_scope;
+        }
         if ty == Type::Never {
             ty_is_never = true;
         }

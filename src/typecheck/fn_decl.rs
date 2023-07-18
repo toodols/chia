@@ -33,7 +33,7 @@ pub fn typecheck_function_declaration<'nodes, 'ctx>(
             Symbol {
                 name: pat.ident(),
                 scope: body_scope,
-				..Default::default()
+                ..Default::default()
             },
             (
                 ctx.symtab.get_type(scope, type_expr),
