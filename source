@@ -1,29 +1,17 @@
-fn print(value: number) -> () {}
-fn to_number(from: string) -> number { 0 }
+// 0 {
+	fn print(value: number) -> () /* 1 */ {}
+	fn to_number(from: string) -> number /* 2 */ { 0 }
 
-fn main() -> number {
-	let my_number = 1;
-	let something = "abcdef";
-	let something = to_number(something);
-	print(something);
-	my_number
-}
-
-/*
-0 (program): {
-	1 (fn print) {
-		var value: number
+	fn main() -> number
+	// 3
+	{
+		let my_number = 1;
+		let something = "abcdef";
+		// this creates a new scope "owned" by this LetDeclaration node
+		// 4 {
+			let something = /* 3 { */ to_number(something); // }
+			print(something);
+			return my_number;
+		// }
 	}
-	2 (fn main) {
-		var my_number: number
-		var something: string
-		
-		3 (let something) {
-			var something: number
-
-			<end of fn main>
-		}
-	}
-}
-
-*/
+// }

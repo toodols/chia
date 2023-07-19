@@ -211,17 +211,19 @@ Node {
                                         },
                                     ),
                                     Expression(
-                                        Node {
-                                            inner: Path(
-                                                [
-                                                    "my_number",
-                                                ],
-                                            ),
-                                            id: 33,
-                                        },
+                                        Return(
+                                            Node {
+                                                inner: Path(
+                                                    [
+                                                        "my_number",
+                                                    ],
+                                                ),
+                                                id: 33,
+                                            },
+                                        ),
                                     ),
                                 ],
-                                does_return: true,
+                                does_return: false,
                             },
                             id: 34,
                         },

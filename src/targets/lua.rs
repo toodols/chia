@@ -39,7 +39,10 @@ fn transpile_expr(source: &mut String, scope: ScopeId, expr: &Expression, ctx: &
 			
 		},
 		Expression::IfExpression(_) => todo!(),
-		Expression::Return(_) => todo!(),
+		Expression::Return(expr) => {
+			source.push_str("return ");
+			transpile_expr(source, scope, expr, ctx)?;
+		},
 		Expression::ForLoop(_) => todo!(),
 		Expression::Path(path) => {
 			let var = ctx.symtab.get_variable_symbol(scope, path.inner.ident()).unwrap();
@@ -51,10 +54,17 @@ fn transpile_expr(source: &mut String, scope: ScopeId, expr: &Expression, ctx: &
 
 fn transpile_block(source: &mut String, Node {inner, id}: &Node<Block>, ctx: &Context<'_>) -> Result<(), ()> {
 	let mut scope = ctx.get_scope_immut(*id).unwrap();
-	for stmt in inner.statements.iter() {
+	
+	let len = inner.statements.len();
+	for (i, stmt) in inner.statements.iter().enumerate() {
 		match stmt {
 			Statement::Empty => {},
-			Statement::Expression(expr) => transpile_expr(source, scope, expr, ctx).unwrap(),
+			Statement::Expression(expr) => {
+				if i == len-1 && inner.does_return {
+					source.push_str("return ");
+				}
+				transpile_expr(source, scope, expr, ctx).unwrap()
+			},
 			Statement::LetDeclaration(Node {inner, id}) => {
 				let original_scope = scope;
 				if let Some(new_scope) = ctx.get_scope_immut(*id) {
