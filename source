@@ -1,9 +1,10 @@
 fn print(value: number) -> () {}
+fn to_number(from: string) -> number { 0 }
 
 fn main() -> number {
 	let my_number = 1;
 	let something = "abcdef";
-	let something = 123;
+	let something = to_number(something);
 	print(something);
 	my_number
 }

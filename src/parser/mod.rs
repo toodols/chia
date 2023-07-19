@@ -9,6 +9,7 @@ use ast::*;
 use lexer::Token;
 use logos::Logos;
 use thiserror::Error;
+use std::fmt::Debug;
 
 use self::expr::parse_expression;
 use self::item::parse_item;
@@ -104,6 +105,13 @@ struct Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
+    /// Constructs a unique node from a given value
+    fn node<T: Debug + Clone>(&mut self, value: T) -> Node<T>  {
+        Node {
+            inner: value,
+            id: self.node_id(),
+        }
+    }
     fn next_token(&mut self) -> Option<Token> {
         self.tokens.next_token_with_pos().map(|(t, _)| t)
     }
@@ -167,64 +175,65 @@ fn parse_fn_call_body(parser: &mut Parser) -> Result<Vec<Expression>, ParseError
     Ok(args)
 }
 
-#[allow(unused)]
-fn parse_macro_invocation(parser: &mut Parser) -> Result<Vec<Token>, ParseError> {
-    // very simple. all parentheses must be closed, all brackets must be closed, and all braces must be closed
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    enum OpenToken {
-        Brace,
-        Paren,
-        Bracket,
-    }
-    impl From<Token> for OpenToken {
-        fn from(t: Token) -> Self {
-            match t {
-                Token::LBrace | Token::RBrace => OpenToken::Brace,
-                Token::LParen | Token::RParen => OpenToken::Paren,
-                Token::LBracket | Token::RBracket => OpenToken::Bracket,
-                _ => panic!("Invalid token for OpenToken"),
-            }
-        }
-    }
-    let mut stack: Vec<Token> = Vec::new();
-    let mut matched: Vec<Token> = Vec::new();
-    loop {
-        let (tok, pos) = parser
-            .next_token_with_pos()
-            .ok_or(ParseError::UnexpectedEOF)?;
-        match tok {
-            Token::LParen | Token::LBracket | Token::LBrace => {
-                stack.push(tok);
-                stack.push(tok);
-            }
-            Token::RParen | Token::RBracket | Token::RBrace => match stack.pop() {
-                Some(top) => {
-                    if OpenToken::from(top) != OpenToken::from(tok) {
-                        return Err(ParseError::UnexpectedToken {
-                            token: tok,
-                            at: pos,
-                        });
-                    }
-                }
-                None => {
-                    return Err(ParseError::UnexpectedToken {
-                        token: tok,
-                        at: pos,
-                    })
-                }
-            },
-            Token::Error => return Err(ParseError::LexError),
-            _ => {}
-        }
-        matched.push(tok);
-        if stack.is_empty() {
-            break;
-        }
-    }
-    Ok(matched)
-}
+// don't even bother trying to include macros in this shit language
+// #[allow(unused)]
+// fn parse_macro_invocation(parser: &mut Parser) -> Result<Vec<Token>, ParseError> {
+//     // very simple. all parentheses must be closed, all brackets must be closed, and all braces must be closed
+//     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+//     enum OpenToken {
+//         Brace,
+//         Paren,
+//         Bracket,
+//     }
+//     impl From<Token> for OpenToken {
+//         fn from(t: Token) -> Self {
+//             match t {
+//                 Token::LBrace | Token::RBrace => OpenToken::Brace,
+//                 Token::LParen | Token::RParen => OpenToken::Paren,
+//                 Token::LBracket | Token::RBracket => OpenToken::Bracket,
+//                 _ => panic!("Invalid token for OpenToken"),
+//             }
+//         }
+//     }
+//     let mut stack: Vec<Token> = Vec::new();
+//     let mut matched: Vec<Token> = Vec::new();
+//     loop {
+//         let (tok, pos) = parser
+//             .next_token_with_pos()
+//             .ok_or(ParseError::UnexpectedEOF)?;
+//         match tok {
+//             Token::LParen | Token::LBracket | Token::LBrace => {
+//                 stack.push(tok);
+//                 stack.push(tok);
+//             }
+//             Token::RParen | Token::RBracket | Token::RBrace => match stack.pop() {
+//                 Some(top) => {
+//                     if OpenToken::from(top) != OpenToken::from(tok) {
+//                         return Err(ParseError::UnexpectedToken {
+//                             token: tok,
+//                             at: pos,
+//                         });
+//                     }
+//                 }
+//                 None => {
+//                     return Err(ParseError::UnexpectedToken {
+//                         token: tok,
+//                         at: pos,
+//                     })
+//                 }
+//             },
+//             Token::Error => return Err(ParseError::LexError),
+//             _ => {}
+//         }
+//         matched.push(tok);
+//         if stack.is_empty() {
+//             break;
+//         }
+//     }
+//     Ok(matched)
+// }
 
-fn parse_let_declaration(parser: &mut Parser) -> Result<LetDeclaration, ParseError> {
+fn parse_let_declaration(parser: &mut Parser) -> Result<Node<LetDeclaration>, ParseError> {
     parser.expect_token(Token::Let)?;
     let pat = parse_pattern(parser)?;
 
@@ -234,33 +243,31 @@ fn parse_let_declaration(parser: &mut Parser) -> Result<LetDeclaration, ParseErr
         if !value.terminating() {
             parser.expect_token(Token::Semicolon)?;
         }
-        Ok(LetDeclaration {
+        Ok(parser.node(LetDeclaration {
             pat,
             value: Some(value),
-            node_id: parser.node_id(),
-        })
+        }))
     } else {
         parser.expect_token(Token::Semicolon)?;
-        Ok(LetDeclaration {
+        Ok(parser.node(LetDeclaration {
             pat,
             value: None,
-            node_id: parser.node_id(),
-        })
+        }))
     }
 }
 
-fn parse_pattern(parser: &mut Parser) -> Result<Pattern, ParseError> {
-    let ident = parser.expect_token(Token::Identifier)?;
-    Ok(Pattern::Ident(ident.to_owned()))
+fn parse_pattern(parser: &mut Parser) -> Result<Node<Pattern>, ParseError> {
+    let ident = parser.expect_token(Token::Identifier)?.to_owned();
+    Ok(parser.node(Pattern::Ident(ident)))
 }
 
-fn parse_type(parser: &mut Parser) -> Result<TypeExpr, ParseError> {
+fn parse_type(parser: &mut Parser) -> Result<Node<TypeExpr>, ParseError> {
     match parser.next_token_with_pos() {
-        Some((Token::Identifier, _)) => Ok(TypeExpr::Identifier(parser.slice_token().to_owned())),
+        Some((Token::Identifier, _)) => Ok(parser.node(TypeExpr::Identifier(parser.slice_token().to_owned()))),
         Some((Token::LParen, _)) => {
             if parser.peek_token() == Some(Token::RParen) {
                 parser.next_token();
-                return Ok(TypeExpr::Unit);
+                return Ok(parser.node(TypeExpr::Unit));
             }
             let mut types = Vec::new();
             types.push(parse_type(parser)?);
@@ -269,7 +276,7 @@ fn parse_type(parser: &mut Parser) -> Result<TypeExpr, ParseError> {
                 types.push(parse_type(parser)?);
             }
             parser.expect_token(Token::RParen)?;
-            Ok(TypeExpr::Tuple(types))
+            Ok(parser.node(TypeExpr::Tuple(types)))
         }
         Some((Token::Error, _)) => Err(ParseError::LexError),
         Some((t, pos)) => Err(ParseError::UnexpectedToken { token: t, at: pos }),
@@ -277,17 +284,17 @@ fn parse_type(parser: &mut Parser) -> Result<TypeExpr, ParseError> {
     }
 }
 
-fn parse_program(parser: &mut Parser) -> Result<Program, ParseError> {
+fn parse_program(parser: &mut Parser) -> Result<Node<Program>, ParseError> {
     let node_id = parser.node_id();
     let mut items = Vec::new();
     while parser.peek_token().is_some() {
         items.push(parse_item(parser)?);
     }
     println!("finished parsing");
-    Ok(Program { items, node_id })
+    Ok(parser.node(Program { items}))
 }
 
-pub fn parse(source: &str) -> Result<Program, ParseError> {
+pub fn parse(source: &str) -> Result<Node<Program>, ParseError> {
     let mut parser = Parser::new(source);
     parse_program(&mut parser)
 }

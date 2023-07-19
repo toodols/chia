@@ -1,4 +1,4 @@
-use crate::parser::ast::Statement;
+use crate::parser::ast::{Statement, Node};
 
 use super::{
     typecheck_expression, CompilerError, CompilerResult, Context, NodeRef, ScopeId, State, Symbol,
@@ -35,17 +35,17 @@ pub fn typecheck_statement<'nodes, 'ctx>(
 ) -> CompilerResult<TckStmtOutput> {
     match stmt {
         Statement::Empty => Ok(Type::Unit.into()),
-        Statement::Expression(expr) => typecheck_expression(ctx, state, expr).map(|out| out.into()),
-        Statement::LetDeclaration(decl) => {
-            let expr = match &decl.value {
+        Statement::Expression(ref expr) => typecheck_expression(ctx, state, expr).map(|out| out.into()),
+        Statement::LetDeclaration(Node {inner, id}) => {
+            let expr = match &inner.value {
                 Some(val) => val,
                 None => Err(CompilerError::AnyError(format!(
                     "{:?} must be initialized",
-                    decl.pat.ident()
+                    inner.pat.inner.ident()
                 )))?,
             };
 
-            let TypecheckOutput { ty, exit_ty } = typecheck_expression(ctx, state.clone(), expr)?;
+            let TypecheckOutput { ty, exit_ty } = typecheck_expression(ctx, state.clone(), &expr)?;
 
             // if ty == Type::Never {
             //     Err(CompilerError::AnyError(format!(
@@ -54,7 +54,7 @@ pub fn typecheck_statement<'nodes, 'ctx>(
             //     )))?;
             // }
             let symbol = Symbol {
-                name: decl.pat.ident(),
+                name: inner.pat.inner.ident(),
                 scope: state.scope,
                 ..Default::default()
             };
@@ -63,7 +63,7 @@ pub fn typecheck_statement<'nodes, 'ctx>(
             let shadowed = match ctx.symtab.variables.get(&symbol) {
                 // add a new scope and continue from there
                 Some(_) => {
-                    let new_scope = ctx.get_scope_from_node_id(decl.node_id);
+                    let new_scope = ctx.get_scope_from_node_id(*id);
                     ctx.symtab.parents.insert(new_scope, state.scope);
                     let Symbol { name, .. } = symbol;
                     ctx.symtab.variables.insert(
@@ -72,7 +72,7 @@ pub fn typecheck_statement<'nodes, 'ctx>(
                             scope: new_scope,
                             ..Default::default()
                         },
-                        (ty, NodeRef::LetDeclaration(decl)),
+                        (ty, NodeRef::LetDeclaration(inner)),
                     );
                     Some(new_scope)
                 }
@@ -80,7 +80,7 @@ pub fn typecheck_statement<'nodes, 'ctx>(
                 None => {
                     ctx.symtab
                         .variables
-                        .insert(symbol, (ty, NodeRef::LetDeclaration(decl)));
+                        .insert(symbol, (ty, NodeRef::LetDeclaration(inner)));
                     None
                 }
             };

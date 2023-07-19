@@ -1,4 +1,4 @@
-use crate::{parser::ast::Block, typecheck::stmt::TckStmtOutput};
+use crate::{parser::ast::{Block, Node}, typecheck::stmt::TckStmtOutput};
 
 use super::super::{typecheck_statement, CompilerResult, Context, State, Type, TypecheckOutput};
 
@@ -15,9 +15,9 @@ fn a() -> number {
 pub fn typecheck_block<'nodes, 'ctx>(
     ctx: &'ctx mut Context<'nodes>,
     state: State,
-    block: &'nodes Block,
+    block: &'nodes Node<Block>,
 ) -> CompilerResult<TypecheckOutput> {
-    let block_scope = ctx.get_scope_from_node_id(block.node_id);
+    let block_scope = ctx.get_scope_from_node_id(block.id);
     // insert block scope into symbol table
     ctx.symtab.parents.insert(block_scope, state.scope);
     let mut state = State {
@@ -27,7 +27,7 @@ pub fn typecheck_block<'nodes, 'ctx>(
     let mut ty = Type::Unit;
     let mut exit_ty = Type::Never;
     let mut ty_is_never = false;
-    for stmt in block.statements.iter() {
+    for stmt in block.inner.statements.iter() {
         let TckStmtOutput {
             tck_output:
                 TypecheckOutput {

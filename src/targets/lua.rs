@@ -1,4 +1,4 @@
-use crate::{typecheck::{Context, Symbol, ScopeId}, parser::ast::{Program, Item, Block, Statement, Expression, Literal}};
+use crate::{typecheck::{Context, Symbol, ScopeId}, parser::ast::{Program, Item, Block, Statement, Expression, Literal, Node}};
 
 // proof of concept for using chia for transpilation
 // a glaring problem is that not enough information is preserved during typechecking
@@ -14,8 +14,8 @@ fn transpile_expr(source: &mut String, scope: ScopeId, expr: &Expression, ctx: &
 		Expression::Block(_) => todo!(),
 		Expression::BinaryOperation(_) => todo!(),
 		Expression::UnaryOperation(_) => todo!(),
-		Expression::Literal(literal) => {
-			match literal {
+		Expression::Literal(Node{inner, ..}) => {
+			match inner {
 				Literal::Unit => source.push_str("nil"),
 				Literal::Array(_) => todo!(),
 				Literal::ArraySized(_, _) => todo!(),
@@ -24,12 +24,12 @@ fn transpile_expr(source: &mut String, scope: ScopeId, expr: &Expression, ctx: &
 				Literal::Boolean(b) => source.push_str(if *b {"true"} else {"false"}),
 			}
 		},
-		Expression::FunctionCall(fn_call) => {
-			transpile_expr(source, scope, fn_call.value.as_ref(), ctx).unwrap();
+		Expression::FunctionCall(Node{inner, ..}) => {
+			transpile_expr(source, scope, inner.value.as_ref(), ctx).unwrap();
 			source.push('(');
 			
-			let len = fn_call.arguments.iter().len();
-			for (i, arg) in fn_call.arguments.iter().enumerate() {
+			let len = inner.arguments.iter().len();
+			for (i, arg) in inner.arguments.iter().enumerate() {
 				transpile_expr(source, scope, arg, ctx).unwrap();
 				if i != len-1 {
 					source.push_str(", ")
@@ -42,33 +42,36 @@ fn transpile_expr(source: &mut String, scope: ScopeId, expr: &Expression, ctx: &
 		Expression::Return(_) => todo!(),
 		Expression::ForLoop(_) => todo!(),
 		Expression::Path(path) => {
-			let var = ctx.symtab.get_variable_symbol(scope, path.ident()).unwrap();
+			let var = ctx.symtab.get_variable_symbol(scope, path.inner.ident()).unwrap();
 			source.push_str(&var.ident())
 		},
 	}
 	Ok(())
 }
 
-fn transpile_block(source: &mut String, block: &Block, ctx: &Context<'_>) -> Result<(), ()> {
-	let mut scope = ctx.get_scope_immut(block.node_id).unwrap();
-	for stmt in block.statements.iter() {
+fn transpile_block(source: &mut String, Node {inner, id}: &Node<Block>, ctx: &Context<'_>) -> Result<(), ()> {
+	let mut scope = ctx.get_scope_immut(*id).unwrap();
+	for stmt in inner.statements.iter() {
 		match stmt {
 			Statement::Empty => {},
 			Statement::Expression(expr) => transpile_expr(source, scope, expr, ctx).unwrap(),
-			Statement::LetDeclaration(let_decl) => {
-				if let Some(new_scope) = ctx.get_scope_immut(let_decl.node_id) {
+			Statement::LetDeclaration(Node {inner, id}) => {
+				let original_scope = scope;
+				if let Some(new_scope) = ctx.get_scope_immut(*id) {
 					scope = new_scope;
 				}
 
-				match &let_decl.value {
+				match &inner.value {
 					Some(v) => {
-						let name = Symbol {scope, name: let_decl.pat.ident(), ..Default::default()}.ident();
+						let name = Symbol {scope, name: inner.pat.inner.ident(), ..Default::default()}.ident();
 						source.push_str(&format!("local {} = ", name));
-						transpile_expr(source, scope, v, ctx).unwrap();
+						// Initialization expression for the LetDeclaration that is shadowing should still
+						// use the scope outside the declaration
+						transpile_expr(source, original_scope, v, ctx).unwrap();
 						source.push('\n')
 					}
 					None => {
-						let name = Symbol {scope, name: let_decl.pat.ident(), ..Default::default()}.ident();
+						let name = Symbol {scope, name: inner.pat.inner.ident(), ..Default::default()}.ident();
 						source.push_str(&format!("local {}", name));
 						source.push('\n')
 					}
@@ -79,12 +82,12 @@ fn transpile_block(source: &mut String, block: &Block, ctx: &Context<'_>) -> Res
 	Ok(())
 }
 
-pub fn lua(program: &Program, ctx: &Context<'_>) -> String {
+pub fn lua(Node {inner, id}: &Node<Program>, ctx: &Context<'_>) -> String {
 	let mut source = String::new();
-	for p in program.items.iter() {
+	for p in inner.items.iter() {
 		match p {
-			Item::FunctionDeclaration(fn_decl) => {
-				let scope = *ctx.symtab.parents.get(&ctx.get_scope_immut(fn_decl.body.node_id).unwrap()).unwrap();
+			Item::FunctionDeclaration(Node {inner: fn_decl, id}) => {
+				let scope = *ctx.symtab.parents.get(&ctx.get_scope_immut(fn_decl.body.id).unwrap()).unwrap();
 				let name = Symbol {scope, name: fn_decl.name.clone(), ..Default::default()}.ident();
 				source.push_str(&format!("function {}()\n", name)[..]);
 				transpile_block(&mut source, &fn_decl.body, ctx).unwrap();

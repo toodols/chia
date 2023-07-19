@@ -1,12 +1,12 @@
 use crate::parser::{
-    ast::{Expression, IfExpression},
+    ast::{Expression, IfExpression, Node},
     lexer::Token,
     ParseError, Parser,
 };
 
 use super::{block::parse_block, parse_expression};
 
-pub(super) fn parse_if_expr(parser: &mut Parser) -> Result<IfExpression, ParseError> {
+pub(super) fn parse_if_expr(parser: &mut Parser) -> Result<Node<IfExpression>, ParseError> {
     parser.expect_token(Token::If)?;
     let condition = parse_expression(parser)?;
     let body = Box::new(Expression::Block(parse_block(parser)?));
@@ -20,9 +20,9 @@ pub(super) fn parse_if_expr(parser: &mut Parser) -> Result<IfExpression, ParseEr
     } else {
         None
     };
-    Ok(IfExpression {
+    Ok(parser.node(IfExpression {
         condition: Box::new(condition),
         body,
         else_body,
-    })
+    }))
 }

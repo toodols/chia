@@ -1,5 +1,5 @@
 use crate::{
-    parser::ast::ForLoop,
+    parser::ast::{ForLoop, Node},
     typecheck::{
         typecheck_block, CompilerError, CompilerResult, Context, NodeRef, State, Symbol, Type,
         TypecheckOutput,
@@ -11,16 +11,16 @@ use super::typecheck_expression;
 pub fn typecheck_for_loop<'nodes, 'ctx>(
     ctx: &'ctx mut Context<'nodes>,
     state: State,
-    expr: &'nodes ForLoop,
+    Node {inner, id}: &'nodes Node<ForLoop>,
 ) -> CompilerResult<TypecheckOutput> {
-    let inner_scope = ctx.get_scope_from_node_id(expr.body.node_id);
+    let inner_scope = ctx.get_scope_from_node_id(*id);
     let t = typecheck_expression(
         ctx,
         State {
             scope: inner_scope,
             ..state.clone()
         },
-        &expr.iter,
+        &inner.iter,
     )?;
 
     if t.ty == Type::Never {
@@ -32,11 +32,11 @@ pub fn typecheck_for_loop<'nodes, 'ctx>(
     ctx.symtab.parents.insert(inner_scope, state.scope);
     ctx.symtab.variables.insert(
         Symbol {
-            name: expr.pat.ident(),
+            name: inner.pat.inner.ident(),
             scope: inner_scope,
             ..Default::default()
         },
-        (iter_item_ty, NodeRef::ForLoop(expr)),
+        (iter_item_ty, NodeRef::ForLoop(inner)),
     );
 
     let block = typecheck_block(
@@ -45,7 +45,7 @@ pub fn typecheck_for_loop<'nodes, 'ctx>(
             expect_break: true,
             ..state
         },
-        &expr.body,
+        &inner.body,
     )?;
 
     // read as: "if the loop body cannot be coerced into unit type"

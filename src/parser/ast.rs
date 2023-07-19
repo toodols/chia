@@ -1,9 +1,13 @@
 use super::lexer::Token;
+use std::fmt::Debug;
 
-// struct Node<T> {
-//     value: T,
-//     // span: Span,
-// }
+/// Each node represents a section of code
+#[derive(Debug, Clone)]
+pub struct Node<T: Debug + Clone> {
+    pub inner: T,
+    pub id: usize,
+    // span: Span,
+}
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub enum SymbolName {
@@ -48,27 +52,33 @@ impl Pattern {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Program {
     pub items: Vec<Item>,
-    pub node_id: usize,
 }
 
-pub type Parameters = Vec<(Pattern, TypeExpr)>;
+#[derive(Debug, Clone)]
+pub struct Parameters(pub Vec<(Node<Pattern>, Node<TypeExpr>)>);
+
+impl Parameters {
+    pub fn new() -> Self{
+        Self(Vec::new())
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct FunctionDeclaration {
     pub name: SymbolName,
-    pub parameters: Parameters,
-    pub body: Block,
-    pub return_type: TypeExpr,
+    pub parameters: Node<Parameters>,
+    pub body: Node<Block>,
+    pub return_type: Node<TypeExpr>,
 }
 
 #[derive(Debug, Clone)]
 pub enum Item {
-    FunctionDeclaration(FunctionDeclaration),
-    TupleStructDeclaration(TupleStructDeclaration),
-    StructDeclaration(StructDeclaration),
+    FunctionDeclaration(Node<FunctionDeclaration>),
+    TupleStructDeclaration(Node<TupleStructDeclaration>),
+    StructDeclaration(Node<StructDeclaration>),
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -188,8 +198,9 @@ pub struct UnaryOperation {
 #[derive(Debug, Clone)]
 pub enum TypeExpr {
     Identifier(String),
-    Tuple(Vec<TypeExpr>),
+    Tuple(Vec<Node<TypeExpr>>),
     Unit,
+    Untyped
 }
 
 #[derive(Debug)]
@@ -208,27 +219,26 @@ pub struct BinaryOperation {
 pub enum Statement {
     Empty,
     Expression(Expression),
-    LetDeclaration(LetDeclaration),
+    LetDeclaration(Node<LetDeclaration>),
 }
 
 #[derive(Debug, Clone)]
 pub struct Block {
     pub statements: Vec<Statement>,
-    pub does_return: bool,
-    // Used to reference the symbol table constructed for each scope
-    pub node_id: usize,
+    /// Whether the last statement is to be returned
+    pub does_return: bool, 
 }
 
 #[derive(Debug, Clone)]
 pub struct TupleStructDeclaration {
     pub name: SymbolName,
-    pub fields: Vec<TypeExpr>,
+    pub fields: Vec<Node<TypeExpr>>,
 }
 
 #[derive(Debug, Clone)]
 pub struct StructDeclaration {
     pub name: SymbolName,
-    pub fields: Vec<(SymbolName, TypeExpr)>,
+    pub fields: Vec<(SymbolName, Node<TypeExpr>)>,
 }
 
 #[derive(Debug, Clone)]
@@ -240,16 +250,16 @@ pub struct Index {
 #[derive(Clone)]
 pub enum Expression {
     Break(Box<Expression>),
-    Index(Index),
-    Block(Block),
-    BinaryOperation(BinaryOperation),
-    UnaryOperation(UnaryOperation),
-    Literal(Literal),
-    FunctionCall(FunctionCall),
-    IfExpression(IfExpression),
+    Index(Node<Index>),
+    Block(Node<Block>),
+    BinaryOperation(Node<BinaryOperation>),
+    UnaryOperation(Node<UnaryOperation>),
+    Literal(Node<Literal>),
+    FunctionCall(Node<FunctionCall>),
+    IfExpression(Node<IfExpression>),
     Return(Box<Expression>),
-    ForLoop(ForLoop),
-    Path(Path),
+    ForLoop(Node<ForLoop>),
+    Path(Node<Path>),
 }
 impl std::fmt::Debug for Expression {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -269,12 +279,6 @@ impl std::fmt::Debug for Expression {
     }
 }
 
-impl From<&str> for Expression {
-    fn from(s: &str) -> Expression {
-        Expression::Literal(Literal::String(s.to_string()))
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct IfExpression {
     pub condition: Box<Expression>,
@@ -290,9 +294,8 @@ impl Expression {
 
 #[derive(Debug, Clone)]
 pub struct LetDeclaration {
-    pub pat: Pattern,
+    pub pat: Node<Pattern>,
     pub value: Option<Expression>,
-    pub node_id: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -303,9 +306,9 @@ pub struct FunctionCall {
 
 #[derive(Debug, Clone)]
 pub struct ForLoop {
-    pub pat: Pattern,
+    pub pat: Node<Pattern>,
     pub iter: Box<Expression>,
-    pub body: Block,
+    pub body: Node<Block>,
 }
 
 #[derive(Debug, Clone)]

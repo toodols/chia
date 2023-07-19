@@ -1,14 +1,14 @@
-use crate::parser::ast::FunctionDeclaration;
+use crate::parser::ast::{FunctionDeclaration, Node};
 
 use super::{typecheck_block, CompilerError, CompilerResult, Context, NodeRef, State, Symbol};
 
 pub fn typecheck_function_declaration<'nodes, 'ctx>(
     ctx: &'ctx mut Context<'nodes>,
     state: State,
-    function: &'nodes FunctionDeclaration,
+    Node {inner, ..}: &'nodes Node<FunctionDeclaration>,
 ) -> CompilerResult<&'ctx mut Context<'nodes>> {
     let scope = state.scope;
-    let body_scope = ctx.get_scope_from_node_id(function.body.node_id);
+    let body_scope = ctx.get_scope_from_node_id(inner.body.id);
 
     // parent is inserted again in typecheck_block with the same arguments
     /*
@@ -28,20 +28,20 @@ pub fn typecheck_function_declaration<'nodes, 'ctx>(
     }
      */
     ctx.symtab.parents.insert(body_scope, scope);
-    for (pat, type_expr) in function.parameters.iter() {
+    for (pat, type_expr) in inner.parameters.inner.0.iter() {
         ctx.symtab.variables.insert(
             Symbol {
-                name: pat.ident(),
+                name: pat.inner.ident(),
                 scope: body_scope,
                 ..Default::default()
             },
             (
-                ctx.symtab.get_type(scope, type_expr),
-                NodeRef::FunctionDeclaration(function),
+                ctx.symtab.get_type(scope, &type_expr.inner),
+                NodeRef::FunctionDeclaration(inner),
             ),
         );
     }
-    let return_type = ctx.symtab.get_type(scope, &function.return_type);
+    let return_type = ctx.symtab.get_type(scope, &inner.return_type.inner);
     let block_output = typecheck_block(
         ctx,
         State {
@@ -49,14 +49,14 @@ pub fn typecheck_function_declaration<'nodes, 'ctx>(
             expect_return_type: Some(return_type.clone()),
             ..Default::default()
         },
-        &function.body,
+        &inner.body,
     )?;
     if block_output.ty.is_subtype(&return_type) {
         Ok(ctx)
     } else {
         Err(CompilerError::AnyError(format!(
             "Function {:?} has return type {:?} but returns {:?}",
-            function.name, return_type, block_output.ty
+            inner.name, return_type, block_output.ty
         )))
     }
 }

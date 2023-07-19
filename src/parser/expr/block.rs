@@ -1,11 +1,11 @@
 use super::parse_expression;
 use crate::parser::{
-    ast::{Block, Statement},
+    ast::{Block, Statement, Node},
     lexer::Token,
     parse_let_declaration, ParseError, Parser,
 };
 
-pub(in crate::parser) fn parse_block(parser: &mut Parser) -> Result<Block, ParseError> {
+pub(in crate::parser) fn parse_block(parser: &mut Parser) -> Result<Node<Block>, ParseError> {
     parser.expect_token(Token::LBrace)?;
     let mut statements = Vec::new();
     let mut does_return = false;
@@ -83,9 +83,8 @@ pub(in crate::parser) fn parse_block(parser: &mut Parser) -> Result<Block, Parse
         }
     }
     parser.expect_token(Token::RBrace)?;
-    Ok(Block {
+    Ok(parser.node(Block {
         statements,
         does_return,
-        node_id,
-    })
+    }))
 }

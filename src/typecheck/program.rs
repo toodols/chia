@@ -1,39 +1,39 @@
-use crate::parser::ast::{Item, Program};
+use crate::parser::ast::{Item, Program, Node};
 
 use super::{
     fn_decl::typecheck_function_declaration, CompilerResult, Context, NodeRef, State, Symbol,
     Symtab, Type,
 };
 
-pub fn typecheck_program(program: &Program) -> CompilerResult<Context<'_>> {
+pub fn typecheck_program(Node {inner, id}: &Node<Program>) -> CompilerResult<Context<'_>> {
     let mut context = Context::new();
-    let global_scope = context.get_new_scope();
+    let global_scope = context.get_scope_from_node_id(*id);
     let state = State {
         scope: global_scope,
         ..Default::default()
     };
     {
         let mut context = &mut context;
-        for item in program.items.iter() {
+        for item in inner.items.iter() {
             match item {
-                Item::FunctionDeclaration(func) => {
+                Item::FunctionDeclaration(Node {inner, ..}) => {
                     context.symtab.variables.insert(
                         Symbol {
-                            name: func.name.clone(),
+                            name: inner.name.clone(),
                             scope: global_scope,
                             ..Default::default()
                         },
                         (
                             Type::Function(
-                                func.parameters
+                                inner.parameters.inner.0
                                     .iter()
                                     .map(|(_, ty_expr)| {
-                                        context.symtab.get_type(global_scope, ty_expr)
+                                        context.symtab.get_type(global_scope, &ty_expr.inner)
                                     })
                                     .collect(),
-                                Box::new(context.symtab.get_type(global_scope, &func.return_type)),
+                                Box::new(context.symtab.get_type(global_scope, &inner.return_type.inner)),
                             ),
-                            NodeRef::FunctionDeclaration(func),
+                            NodeRef::FunctionDeclaration(inner),
                         ),
                     );
                 }
@@ -44,7 +44,7 @@ pub fn typecheck_program(program: &Program) -> CompilerResult<Context<'_>> {
             }
         }
 
-        for item in program.items.iter() {
+        for item in inner.items.iter() {
             match item {
                 Item::FunctionDeclaration(func) => {
                     context = typecheck_function_declaration(context, state.clone(), func)?;

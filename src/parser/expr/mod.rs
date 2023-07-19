@@ -2,6 +2,7 @@ use self::if_expr::parse_if_expr;
 use self::path::parse_expr_path;
 use self::{literal::parse_literal, loops::parse_loops};
 
+use super::ast::Node;
 use super::{
     ast::{
         Associativity, BinaryOperation, BinaryOperator, Expression, FunctionCall, Index, Literal,
@@ -36,7 +37,7 @@ fn parse_atomic_expression(parser: &mut Parser) -> Result<Expression, ParseError
                         let expr = parse_expression(parser)?;
                         expr
                     }
-                    _ => Expression::Literal(Literal::Unit),
+                    _ => Expression::Literal(parser.node(Literal::Unit)),
                 });
                 match t {
                     Token::Break => Ok(Expression::Break(inner)),
@@ -100,11 +101,11 @@ pub(in crate::parser) fn parse_expression(parser: &mut Parser) -> Result<Express
         let right = expressions.remove(op_index);
         expressions.insert(
             op_index,
-            Expression::BinaryOperation(BinaryOperation {
+            Expression::BinaryOperation(parser.node(BinaryOperation {
                 operator: operators.remove(op_index),
                 left: Box::new(left),
                 right: Box::new(right),
-            }),
+            })),
         );
     }
     Ok(expressions.pop().unwrap())
@@ -115,17 +116,19 @@ fn parse_expression_postfix(parser: &mut Parser) -> Result<Expression, ParseErro
     loop {
         match parser.peek_token() {
             Some(Token::LParen) => {
-                expr = Expression::FunctionCall(FunctionCall {
+                let arguments = parse_fn_call_body(parser)?;
+                expr = Expression::FunctionCall(parser.node(FunctionCall {
                     value: Box::new(expr),
-                    arguments: parse_fn_call_body(parser)?,
-                });
+                    arguments,
+                }));
             }
             Some(Token::LBracket) => {
                 parser.next_token();
-                expr = Expression::Index(Index {
+                let index_expr = parse_expression(parser)?;
+                expr = Expression::Index(parser.node(Index {
                     value: Box::new(expr),
-                    index: Box::new(parse_expression(parser)?),
-                });
+                    index: Box::new(index_expr),
+                }));
                 parser.expect_token(Token::RBracket)?;
             }
             Some(Token::Error) => return Err(ParseError::LexError),
@@ -140,10 +143,11 @@ fn parse_expression_prefix(parser: &mut Parser) -> Result<Expression, ParseError
     match parser.peek_token() {
         Some(Token::Sub) => {
             parser.next_token();
-            Ok(Expression::UnaryOperation(UnaryOperation {
+            let inner_expr = parse_expression_prefix(parser)?;
+            Ok(Expression::UnaryOperation(parser.node(UnaryOperation {
                 operator: UnaryOperator::Negate,
-                value: Box::new(parse_expression_prefix(parser)?),
-            }))
+                value: Box::new(inner_expr),
+            })))
         }
         Some(_) => parse_expression_postfix(parser),
         None => Err(ParseError::UnexpectedEOF),

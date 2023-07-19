@@ -115,8 +115,8 @@ impl<'a> Debug for NodeRef<'a> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             NodeRef::FunctionDeclaration(func) => write!(f, "FunctionDeclaration({:?})", func.name),
-            NodeRef::LetDeclaration(decl) => write!(f, "LetDeclaration({:?})", decl.pat.ident()),
-            NodeRef::ForLoop(loop_) => write!(f, "ForLoop({:?})", loop_.pat.ident()),
+            NodeRef::LetDeclaration(decl) => write!(f, "LetDeclaration({:?})", decl.pat.inner.ident()),
+            NodeRef::ForLoop(loop_) => write!(f, "ForLoop({:?})", loop_.pat.inner.ident()),
         }
     }
 }

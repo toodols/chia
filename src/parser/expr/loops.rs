@@ -1,5 +1,5 @@
 use crate::parser::{
-    ast::{Expression, ForLoop},
+    ast::{Expression, ForLoop, Node},
     lexer::Token,
     parse_pattern, ParseError, Parser,
 };
@@ -14,15 +14,15 @@ pub(super) fn parse_loops(parser: &mut Parser) -> Result<Expression, ParseError>
     }
 }
 
-fn parse_for_loop(parser: &mut Parser) -> Result<ForLoop, ParseError> {
+fn parse_for_loop(parser: &mut Parser) -> Result<Node<ForLoop>, ParseError> {
     parser.expect_token(Token::For)?;
     let pat = parse_pattern(parser)?;
     parser.expect_token(Token::In)?;
     let iter = Box::new(parse_expression(parser)?);
     let block = parse_block(parser)?;
-    Ok(ForLoop {
+    Ok(parser.node(ForLoop {
         pat,
         iter,
         body: block,
-    })
+    }))
 }
