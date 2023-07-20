@@ -1,17 +1,8 @@
-// 0 {
-	fn print(value: number) -> () /* 1 */ {}
-	fn to_number(from: string) -> number /* 2 */ { 0 }
+fn print(n: number) {}
 
-	fn main() -> number
-	// 3
-	{
-		let my_number = 1;
-		let something = "abcdef";
-		// this creates a new scope "owned" by this LetDeclaration node
-		// 4 {
-			let something = /* 3 { */ to_number(something); // }
-			print(something);
-			return my_number;
-		// }
+fn main() {
+	let i = 2;
+	for i in 0..100 {
+		print(i);
 	}
-// }
+}

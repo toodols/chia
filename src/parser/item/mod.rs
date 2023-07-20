@@ -1,6 +1,10 @@
 use self::{fn_decl::parse_fn_declaration, struct_decl::parse_struct_declaration};
 
-use super::{ast::{Item, Node}, lexer::Token, ParseError, Parser};
+use super::{
+    ast::{Item, Node},
+    lexer::Token,
+    ParseError, Parser,
+};
 mod fn_decl;
 mod struct_decl;
 

@@ -8,10 +8,11 @@ use std::ops::Range;
 use ast::*;
 use lexer::Token;
 use logos::Logos;
-use thiserror::Error;
 use std::fmt::Debug;
+use thiserror::Error;
 
 use self::expr::parse_expression;
+use self::expr::path::parse_expr_path;
 use self::item::parse_item;
 
 struct Tokens<'a> {
@@ -106,7 +107,7 @@ struct Parser<'a> {
 
 impl<'a> Parser<'a> {
     /// Constructs a unique node from a given value
-    fn node<T: Debug + Clone>(&mut self, value: T) -> Node<T>  {
+    fn node<T: Debug + Clone>(&mut self, value: T) -> Node<T> {
         Node {
             inner: value,
             id: self.node_id(),
@@ -249,21 +250,20 @@ fn parse_let_declaration(parser: &mut Parser) -> Result<Node<LetDeclaration>, Pa
         }))
     } else {
         parser.expect_token(Token::Semicolon)?;
-        Ok(parser.node(LetDeclaration {
-            pat,
-            value: None,
-        }))
+        Ok(parser.node(LetDeclaration { pat, value: None }))
     }
 }
 
-fn parse_pattern(parser: &mut Parser) -> Result<Node<Pattern>, ParseError> {
-    let ident = parser.expect_token(Token::Identifier)?.to_owned();
-    Ok(parser.node(Pattern::Ident(ident)))
+fn parse_pattern(parser: &mut Parser) -> Result<Pattern, ParseError> {
+    let path = parse_expr_path(parser)?;
+    Ok(Pattern::Path(path))
 }
 
 fn parse_type(parser: &mut Parser) -> Result<Node<TypeExpr>, ParseError> {
     match parser.next_token_with_pos() {
-        Some((Token::Identifier, _)) => Ok(parser.node(TypeExpr::Identifier(parser.slice_token().to_owned()))),
+        Some((Token::Identifier, _)) => {
+            Ok(parser.node(TypeExpr::Identifier(parser.slice_token().to_owned())))
+        }
         Some((Token::LParen, _)) => {
             if parser.peek_token() == Some(Token::RParen) {
                 parser.next_token();
@@ -291,7 +291,7 @@ fn parse_program(parser: &mut Parser) -> Result<Node<Program>, ParseError> {
         items.push(parse_item(parser)?);
     }
     println!("finished parsing");
-    Ok(parser.node(Program { items}))
+    Ok(parser.node(Program { items }))
 }
 
 pub fn parse(source: &str) -> Result<Node<Program>, ParseError> {

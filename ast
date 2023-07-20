@@ -9,12 +9,16 @@ Node {
                             inner: Parameters(
                                 [
                                     (
-                                        Node {
-                                            inner: Ident(
-                                                "value",
-                                            ),
-                                            id: 1,
-                                        },
+                                        Path(
+                                            Node {
+                                                inner: Path(
+                                                    [
+                                                        "n",
+                                                    ],
+                                                ),
+                                                id: 1,
+                                            },
+                                        ),
                                         Node {
                                             inner: Identifier(
                                                 "number",
@@ -44,63 +48,12 @@ Node {
             FunctionDeclaration(
                 Node {
                     inner: FunctionDeclaration {
-                        name: "to_number",
-                        parameters: Node {
-                            inner: Parameters(
-                                [
-                                    (
-                                        Node {
-                                            inner: Ident(
-                                                "from",
-                                            ),
-                                            id: 8,
-                                        },
-                                        Node {
-                                            inner: Identifier(
-                                                "string",
-                                            ),
-                                            id: 9,
-                                        },
-                                    ),
-                                ],
-                            ),
-                            id: 10,
-                        },
-                        body: Node {
-                            inner: Block {
-                                statements: [
-                                    Expression(
-                                        Node {
-                                            inner: Number(
-                                                0,
-                                            ),
-                                            id: 13,
-                                        },
-                                    ),
-                                ],
-                                does_return: true,
-                            },
-                            id: 14,
-                        },
-                        return_type: Node {
-                            inner: Identifier(
-                                "number",
-                            ),
-                            id: 11,
-                        },
-                    },
-                    id: 15,
-                },
-            ),
-            FunctionDeclaration(
-                Node {
-                    inner: FunctionDeclaration {
                         name: "main",
                         parameters: Node {
                             inner: Parameters(
                                 [],
                             ),
-                            id: 16,
+                            id: 8,
                         },
                         body: Node {
                             inner: Block {
@@ -108,136 +61,110 @@ Node {
                                     LetDeclaration(
                                         Node {
                                             inner: LetDeclaration {
-                                                pat: Node {
-                                                    inner: Ident(
-                                                        "my_number",
-                                                    ),
-                                                    id: 19,
-                                                },
-                                                value: Some(
-                                                    Node {
-                                                        inner: Number(
-                                                            1,
-                                                        ),
-                                                        id: 20,
-                                                    },
-                                                ),
-                                            },
-                                            id: 21,
-                                        },
-                                    ),
-                                    LetDeclaration(
-                                        Node {
-                                            inner: LetDeclaration {
-                                                pat: Node {
-                                                    inner: Ident(
-                                                        "something",
-                                                    ),
-                                                    id: 22,
-                                                },
-                                                value: Some(
-                                                    Node {
-                                                        inner: String(
-                                                            "abcdef",
-                                                        ),
-                                                        id: 23,
-                                                    },
-                                                ),
-                                            },
-                                            id: 24,
-                                        },
-                                    ),
-                                    LetDeclaration(
-                                        Node {
-                                            inner: LetDeclaration {
-                                                pat: Node {
-                                                    inner: Ident(
-                                                        "something",
-                                                    ),
-                                                    id: 25,
-                                                },
-                                                value: Some(
-                                                    Node {
-                                                        inner: FunctionCall {
-                                                            value: Node {
-                                                                inner: Path(
-                                                                    [
-                                                                        "to_number",
-                                                                    ],
-                                                                ),
-                                                                id: 26,
-                                                            },
-                                                            arguments: [
-                                                                Node {
-                                                                    inner: Path(
-                                                                        [
-                                                                            "something",
-                                                                        ],
-                                                                    ),
-                                                                    id: 27,
-                                                                },
-                                                            ],
-                                                        },
-                                                        id: 28,
-                                                    },
-                                                ),
-                                            },
-                                            id: 29,
-                                        },
-                                    ),
-                                    Expression(
-                                        Node {
-                                            inner: FunctionCall {
-                                                value: Node {
-                                                    inner: Path(
-                                                        [
-                                                            "print",
-                                                        ],
-                                                    ),
-                                                    id: 30,
-                                                },
-                                                arguments: [
+                                                pat: Path(
                                                     Node {
                                                         inner: Path(
                                                             [
-                                                                "something",
+                                                                "i",
                                                             ],
                                                         ),
-                                                        id: 31,
+                                                        id: 11,
                                                     },
-                                                ],
+                                                ),
+                                                value: Some(
+                                                    Node {
+                                                        inner: Number(
+                                                            2,
+                                                        ),
+                                                        id: 12,
+                                                    },
+                                                ),
                                             },
-                                            id: 32,
+                                            id: 13,
                                         },
                                     ),
                                     Expression(
-                                        Return(
-                                            Node {
-                                                inner: Path(
-                                                    [
-                                                        "my_number",
-                                                    ],
+                                        Node {
+                                            inner: ForLoop {
+                                                pat: Path(
+                                                    Node {
+                                                        inner: Path(
+                                                            [
+                                                                "i",
+                                                            ],
+                                                        ),
+                                                        id: 14,
+                                                    },
                                                 ),
-                                                id: 33,
+                                                iter: Node {
+                                                    inner: BinaryOperation {
+                                                        operator: Range,
+                                                        left: Node {
+                                                            inner: Number(
+                                                                0,
+                                                            ),
+                                                            id: 15,
+                                                        },
+                                                        right: Node {
+                                                            inner: Number(
+                                                                100,
+                                                            ),
+                                                            id: 16,
+                                                        },
+                                                    },
+                                                    id: 17,
+                                                },
+                                                body: Node {
+                                                    inner: Block {
+                                                        statements: [
+                                                            Expression(
+                                                                Node {
+                                                                    inner: FunctionCall {
+                                                                        value: Node {
+                                                                            inner: Path(
+                                                                                [
+                                                                                    "print",
+                                                                                ],
+                                                                            ),
+                                                                            id: 19,
+                                                                        },
+                                                                        arguments: [
+                                                                            Node {
+                                                                                inner: Path(
+                                                                                    [
+                                                                                        "i",
+                                                                                    ],
+                                                                                ),
+                                                                                id: 20,
+                                                                            },
+                                                                        ],
+                                                                    },
+                                                                    id: 21,
+                                                                },
+                                                            ),
+                                                        ],
+                                                        does_return: false,
+                                                    },
+                                                    id: 22,
+                                                },
                                             },
-                                        ),
+                                            id: 23,
+                                        },
                                     ),
                                 ],
                                 does_return: false,
                             },
-                            id: 34,
+                            id: 24,
                         },
                         return_type: Node {
-                            inner: Identifier(
-                                "number",
-                            ),
-                            id: 17,
+                            inner: Unit,
+                            id: 9,
                         },
                     },
-                    id: 35,
+                    id: 25,
                 },
             ),
         ],
     },
-    id: 36,
+    id: 26,
 }

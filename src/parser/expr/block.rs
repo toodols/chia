@@ -1,6 +1,6 @@
 use super::parse_expression;
 use crate::parser::{
-    ast::{Block, Statement, Node},
+    ast::{Block, Node, Statement},
     lexer::Token,
     parse_let_declaration, ParseError, Parser,
 };
@@ -71,7 +71,7 @@ pub(in crate::parser) fn parse_block(parser: &mut Parser) -> Result<Node<Block>,
             }?;
 
             statements.push(statement);
-            if !did_close {
+            if !did_close && can_cont {
                 does_return = true;
             }
 

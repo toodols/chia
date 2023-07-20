@@ -19,10 +19,9 @@ pub(super) fn parse_struct_declaration(parser: &mut Parser) -> Result<Item, Pars
         }
         parser.expect_token(Token::RParen)?;
         parser.expect_token(Token::Semicolon)?;
-        Ok(Item::TupleStructDeclaration(parser.node(TupleStructDeclaration {
-            name,
-            fields,
-        })))
+        Ok(Item::TupleStructDeclaration(
+            parser.node(TupleStructDeclaration { name, fields }),
+        ))
     } else {
         Err(ParseError::Unknown)
     }

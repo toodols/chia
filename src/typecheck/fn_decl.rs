@@ -5,7 +5,7 @@ use super::{typecheck_block, CompilerError, CompilerResult, Context, NodeRef, St
 pub fn typecheck_function_declaration<'nodes, 'ctx>(
     ctx: &'ctx mut Context<'nodes>,
     state: State,
-    Node {inner, ..}: &'nodes Node<FunctionDeclaration>,
+    Node { inner, .. }: &'nodes Node<FunctionDeclaration>,
 ) -> CompilerResult<&'ctx mut Context<'nodes>> {
     let scope = state.scope;
     let body_scope = ctx.get_scope_from_node_id(inner.body.id);
@@ -31,7 +31,7 @@ pub fn typecheck_function_declaration<'nodes, 'ctx>(
     for (pat, type_expr) in inner.parameters.inner.0.iter() {
         ctx.symtab.variables.insert(
             Symbol {
-                name: pat.inner.ident(),
+                name: pat.as_path_symbol(),
                 scope: body_scope,
                 ..Default::default()
             },

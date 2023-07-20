@@ -16,7 +16,7 @@ pub mod block;
 mod if_expr;
 mod literal;
 mod loops;
-mod path;
+pub mod path;
 
 // Basically expressions that don't rely on operators / precedence and are generally wrapped together nicely
 fn parse_atomic_expression(parser: &mut Parser) -> Result<Expression, ParseError> {

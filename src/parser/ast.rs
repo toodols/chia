@@ -30,7 +30,7 @@ pub struct Path(pub Vec<SymbolName>);
 // Right now they are just "drop"
 impl Path {
     // temporary solution so i don't have to deal with actual paths.
-    pub fn ident(&self) -> &SymbolName {
+    pub fn symbol(&self) -> &SymbolName {
         &self.0[0]
     }
 }
@@ -40,13 +40,13 @@ impl Path {
 #[derive(Clone, Debug)]
 #[non_exhaustive]
 pub enum Pattern {
-    Ident(String),
+    Path(Node<Path>),
 }
 
 impl Pattern {
-    pub fn ident(&self) -> SymbolName {
+    pub fn as_path_symbol(&self) -> SymbolName {
         match self {
-            Pattern::Ident(s) => SymbolName::External(s.clone()),
+            Pattern::Path(s) => SymbolName::External(s.inner.symbol().ident()),
             _ => panic!(),
         }
     }
@@ -58,10 +58,10 @@ pub struct Program {
 }
 
 #[derive(Debug, Clone)]
-pub struct Parameters(pub Vec<(Node<Pattern>, Node<TypeExpr>)>);
+pub struct Parameters(pub Vec<(Pattern, Node<TypeExpr>)>);
 
 impl Parameters {
-    pub fn new() -> Self{
+    pub fn new() -> Self {
         Self(Vec::new())
     }
 }
@@ -200,7 +200,7 @@ pub enum TypeExpr {
     Identifier(String),
     Tuple(Vec<Node<TypeExpr>>),
     Unit,
-    Untyped
+    Untyped,
 }
 
 #[derive(Debug)]
@@ -226,7 +226,7 @@ pub enum Statement {
 pub struct Block {
     pub statements: Vec<Statement>,
     /// Whether the last statement is to be returned
-    pub does_return: bool, 
+    pub does_return: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -287,6 +287,7 @@ pub struct IfExpression {
 }
 
 impl Expression {
+    /// True if the expression is self terminating; does not need a semicolon
     pub fn terminating(&self) -> bool {
         matches!(self, Expression::IfExpression(_))
     }
@@ -294,7 +295,7 @@ impl Expression {
 
 #[derive(Debug, Clone)]
 pub struct LetDeclaration {
-    pub pat: Node<Pattern>,
+    pub pat: Pattern,
     pub value: Option<Expression>,
 }
 
@@ -306,7 +307,7 @@ pub struct FunctionCall {
 
 #[derive(Debug, Clone)]
 pub struct ForLoop {
-    pub pat: Node<Pattern>,
+    pub pat: Pattern,
     pub iter: Box<Expression>,
     pub body: Node<Block>,
 }

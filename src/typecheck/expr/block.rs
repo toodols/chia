@@ -1,4 +1,7 @@
-use crate::{parser::ast::{Block, Node}, typecheck::stmt::TckStmtOutput};
+use crate::{
+    parser::ast::{Block, Node},
+    typecheck::stmt::TckStmtOutput,
+};
 
 use super::super::{typecheck_statement, CompilerResult, Context, State, Type, TypecheckOutput};
 

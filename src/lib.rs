@@ -1,6 +1,6 @@
 pub mod parser;
-pub mod typecheck;
 pub mod targets;
+pub mod typecheck;
 
 #[test]
 fn test() {

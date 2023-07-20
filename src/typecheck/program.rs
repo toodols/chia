@@ -1,11 +1,11 @@
-use crate::parser::ast::{Item, Program, Node};
+use crate::parser::ast::{Item, Node, Program};
 
 use super::{
     fn_decl::typecheck_function_declaration, CompilerResult, Context, NodeRef, State, Symbol,
     Symtab, Type,
 };
 
-pub fn typecheck_program(Node {inner, id}: &Node<Program>) -> CompilerResult<Context<'_>> {
+pub fn typecheck_program(Node { inner, id }: &Node<Program>) -> CompilerResult<Context<'_>> {
     let mut context = Context::new();
     let global_scope = context.get_scope_from_node_id(*id);
     let state = State {
@@ -16,22 +16,31 @@ pub fn typecheck_program(Node {inner, id}: &Node<Program>) -> CompilerResult<Con
         let mut context = &mut context;
         for item in inner.items.iter() {
             match item {
-                Item::FunctionDeclaration(Node {inner, ..}) => {
+                Item::FunctionDeclaration(Node { inner, id }) => {
+                    let symbol = Symbol {
+                        name: inner.name.clone(),
+                        scope: global_scope,
+                        ..Default::default()
+                    };
+                    context.node_id_to_symbol.insert(*id, symbol.clone());
                     context.symtab.variables.insert(
-                        Symbol {
-                            name: inner.name.clone(),
-                            scope: global_scope,
-                            ..Default::default()
-                        },
+                        symbol,
                         (
                             Type::Function(
-                                inner.parameters.inner.0
+                                inner
+                                    .parameters
+                                    .inner
+                                    .0
                                     .iter()
                                     .map(|(_, ty_expr)| {
                                         context.symtab.get_type(global_scope, &ty_expr.inner)
                                     })
                                     .collect(),
-                                Box::new(context.symtab.get_type(global_scope, &inner.return_type.inner)),
+                                Box::new(
+                                    context
+                                        .symtab
+                                        .get_type(global_scope, &inner.return_type.inner),
+                                ),
                             ),
                             NodeRef::FunctionDeclaration(inner),
                         ),

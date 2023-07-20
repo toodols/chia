@@ -8,7 +8,7 @@ use super::typecheck_expression;
 pub fn typecheck_if_expr<'nodes, 'ctx>(
     ctx: &'ctx mut Context<'nodes>,
     state: State,
-    Node{inner, id}: &'nodes Node<IfExpression>,
+    Node { inner, id }: &'nodes Node<IfExpression>,
 ) -> CompilerResult<TypecheckOutput> {
     let TypecheckOutput { ty, .. } =
         typecheck_expression(ctx, state.clone(), inner.condition.as_ref())?;

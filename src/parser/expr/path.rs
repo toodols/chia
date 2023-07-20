@@ -1,5 +1,5 @@
 use crate::parser::{
-    ast::{Path, SymbolName, Node},
+    ast::{Node, Path, SymbolName},
     lexer::Token,
     ParseError, Parser,
 };

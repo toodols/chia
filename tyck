@@ -1,17 +1,9 @@
 Context {
     symtab: Symtab {
         variables: {
-            my_number@3: (
+            i@3: (
                 Number,
-                LetDeclaration("my_number"),
-            ),
-            value@1: (
-                Number,
-                FunctionDeclaration("print"),
-            ),
-            something@4: (
-                Number,
-                LetDeclaration("something"),
+                ForLoop("i"),
             ),
             print@0: (
                 Function(
@@ -22,72 +14,63 @@ Context {
                 ),
                 FunctionDeclaration("print"),
             ),
-            to_number@0: (
-                Function(
-                    [
-                        String,
-                    ],
-                    Number,
-                ),
-                FunctionDeclaration("to_number"),
-            ),
-            from@2: (
-                String,
-                FunctionDeclaration("to_number"),
-            ),
-            something@3: (
-                String,
-                LetDeclaration("something"),
-            ),
             main@0: (
                 Function(
                     [],
-                    Number,
+                    Unit,
                 ),
                 FunctionDeclaration("main"),
+            ),
+            n@1: (
+                Number,
+                FunctionDeclaration("print"),
+            ),
+            i@2: (
+                Number,
+                LetDeclaration("i"),
             ),
         },
         types: {},
         structs: {},
         parents: {
             ScopeId(
-                3,
+                1,
             ): ScopeId(
                 0,
+            ),
+            ScopeId(
+                3,
+            ): ScopeId(
+                2,
             ),
             ScopeId(
                 2,
             ): ScopeId(
                 0,
             ),
-            ScopeId(
-                4,
-            ): ScopeId(
-                3,
-            ),
-            ScopeId(
-                1,
-            ): ScopeId(
-                0,
-            ),
         },
     },
+    node_id_to_symbol: {
+        14: i@3,
+        19: print@0,
+        20: i@3,
+        7: print@0,
+        25: main@0,
+        11: i@2,
+    },
     scopes_by_node_id: {
+        26: ScopeId(
+            0,
+        ),
+        22: ScopeId(
+            3,
+        ),
         6: ScopeId(
             1,
         ),
-        29: ScopeId(
-            4,
-        ),
-        14: ScopeId(
+        24: ScopeId(
             2,
         ),
-        36: ScopeId(
-            0,
-        ),
-        34: ScopeId(
-            3,
-        ),
     },
-    scope_counter: 5,
+    scope_counter: 4,
 }

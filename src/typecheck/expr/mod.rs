@@ -2,11 +2,26 @@ pub mod block;
 pub mod for_loop;
 pub mod if_expr;
 use self::if_expr::typecheck_if_expr;
-use crate::parser::ast::{BinaryOperation, BinaryOperator, Expression, Literal, Node};
+use crate::parser::ast::{BinaryOperation, BinaryOperator, Expression, Literal, Node, Path};
 use block::typecheck_block;
 use for_loop::typecheck_for_loop;
 
-use super::{CompilerError, CompilerResult, Context, State, Type, TypecheckOutput};
+use super::{CompilerError, CompilerResult, Context, State, Symbol, Type, TypecheckOutput};
+
+pub fn typecheck_path<'nodes, 'ctx>(
+    ctx: &'ctx mut Context<'nodes>,
+    state: State,
+    path: &'nodes Node<Path>,
+) -> CompilerResult<TypecheckOutput> {
+    ctx.symtab
+        .get_variable_symbol(state.scope, path.inner.symbol())
+        .map(|t| {
+            let r = ctx.symtab.variables.get(&t).unwrap().0.clone().into();
+            ctx.node_id_to_symbol.insert(path.id, t);
+            r
+        })
+        .ok_or_else(|| CompilerError::VariableNotFound(path.inner.symbol().clone()))
+}
 
 pub fn typecheck_expression<'nodes, 'ctx>(
     ctx: &'ctx mut Context<'nodes>,
@@ -14,24 +29,19 @@ pub fn typecheck_expression<'nodes, 'ctx>(
     expr: &'nodes Expression,
 ) -> CompilerResult<TypecheckOutput> {
     match expr {
-        Expression::Literal(Node{inner, ..}) => {
-            match inner {
-                Literal::Unit => Ok(Type::Unit.into()),
-                Literal::Number(_) => Ok(Type::Number.into()),
-                Literal::String(_) => Ok(Type::String.into()),
-                Literal::Boolean(_) => Ok(Type::Boolean.into()),
-                _ => todo!()
-            }
-        }
-        Expression::Path(path) => ctx
-            .symtab
-            .get_variable(state.scope, path.inner.ident())
-            .map(|t| t.into())
-            .ok_or_else(|| CompilerError::VariableNotFound(path.inner.ident().clone())),
-        Expression::BinaryOperation(Node{inner, ..}) => {
+        Expression::Literal(Node { inner, .. }) => match inner {
+            Literal::Unit => Ok(Type::Unit.into()),
+            Literal::Number(_) => Ok(Type::Number.into()),
+            Literal::String(_) => Ok(Type::String.into()),
+            Literal::Boolean(_) => Ok(Type::Boolean.into()),
+            _ => todo!(),
+        },
+        Expression::Path(path) => typecheck_path(ctx, state, path),
+        Expression::BinaryOperation(Node { inner, .. }) => {
             let TypecheckOutput { ty: left_ty, .. } =
                 typecheck_expression(ctx, state.clone(), &inner.left)?;
-            let TypecheckOutput { ty: right_ty, .. } = typecheck_expression(ctx, state, &inner.right)?;
+            let TypecheckOutput { ty: right_ty, .. } =
+                typecheck_expression(ctx, state, &inner.right)?;
             match inner {
                 BinaryOperation {
                     operator:
@@ -71,7 +81,7 @@ pub fn typecheck_expression<'nodes, 'ctx>(
                 _ => panic!("unimplemented"),
             }
         }
-        Expression::FunctionCall(Node{inner, ..}) => {
+        Expression::FunctionCall(Node { inner, .. }) => {
             let ty;
             TypecheckOutput { ty, .. } =
                 typecheck_expression(ctx, state.clone(), inner.value.as_ref())?;

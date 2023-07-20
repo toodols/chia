@@ -106,6 +106,28 @@ impl Type {
     }
 }
 
+impl Pattern {
+    // Decompose a pattern into its symbols against a type
+    pub fn decompose(&self, ty: &Type) -> CompilerResult<Vec<(usize, Type)>> {
+        let mut symbols = HashMap::new();
+
+        match self {
+            Pattern::Path(path) => {
+                let uhoh = symbols
+                    .insert(path.inner.symbol(), (path.id, ty.clone()))
+                    .is_some();
+                if uhoh {
+                    return Err(CompilerError::VariableAlreadyExists(format!(
+                        "Symbol {:?} already exists in pattern",
+                        path.inner.symbol()
+                    )));
+                }
+            }
+        }
+        Ok(symbols.into_values().collect())
+    }
+}
+
 pub enum NodeRef<'a> {
     FunctionDeclaration(&'a FunctionDeclaration),
     LetDeclaration(&'a LetDeclaration),
@@ -115,8 +137,10 @@ impl<'a> Debug for NodeRef<'a> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             NodeRef::FunctionDeclaration(func) => write!(f, "FunctionDeclaration({:?})", func.name),
-            NodeRef::LetDeclaration(decl) => write!(f, "LetDeclaration({:?})", decl.pat.inner.ident()),
-            NodeRef::ForLoop(loop_) => write!(f, "ForLoop({:?})", loop_.pat.inner.ident()),
+            NodeRef::LetDeclaration(decl) => {
+                write!(f, "LetDeclaration({:?})", decl.pat.as_path_symbol())
+            }
+            NodeRef::ForLoop(loop_) => write!(f, "ForLoop({:?})", loop_.pat.as_path_symbol()),
         }
     }
 }
@@ -171,6 +195,8 @@ impl<'a> Symtab<'a> {
             parents: HashMap::new(),
         }
     }
+
+    /// Get's the first variable with the name in the scope chain
     pub fn get_variable_symbol(&self, mut scope: ScopeId, name: &SymbolName) -> Option<Symbol> {
         loop {
             let sym = Symbol {
@@ -187,9 +213,13 @@ impl<'a> Symtab<'a> {
             }
         }
     }
+
     pub fn get_variable(&self, scope: ScopeId, name: &SymbolName) -> Option<Type> {
-        self.get_variable_symbol(scope, name).map(|sym|self.variables.get(&sym).unwrap().0.clone())
+        self.get_variable_symbol(scope, name)
+            .map(|sym| self.variables.get(&sym).unwrap().0.clone())
     }
+
+    /// Resolve a type expression into a real type.
     pub fn get_type(&self, scope: ScopeId, expr: &TypeExpr) -> Type {
         // ScopeId(0) is the global scope
         if scope == ScopeId(0) {
@@ -214,6 +244,7 @@ impl<'a> Symtab<'a> {
 pub enum CompilerError {
     MismatchedTypes(String),
     AnyError(String),
+    VariableAlreadyExists(String),
     VariableNotFound(SymbolName),
     Unknown,
 }
@@ -249,17 +280,32 @@ impl Default for TypecheckOutput {
 #[derive(Debug)]
 pub struct Context<'a> {
     pub symtab: Symtab<'a>,
+    node_id_to_symbol: HashMap<usize, Symbol>,
     pub scopes_by_node_id: HashMap<usize, ScopeId>,
     pub scope_counter: usize,
 }
+
+/// Node<T: SymbolicNode>'s id has a corresponding symbol
+pub trait SymbolicNode: Debug + Clone {}
+// impl SymbolicNode for LetDeclaration {}
+impl SymbolicNode for FunctionDeclaration {}
+impl SymbolicNode for Path {}
 
 impl<'a> Context<'a> {
     fn new() -> Self {
         Context {
             symtab: Symtab::new(),
+            node_id_to_symbol: HashMap::new(),
             scopes_by_node_id: HashMap::new(),
             scope_counter: 0,
         }
+    }
+    pub fn get_node_symbol(&self, node: &Node<impl SymbolicNode>) -> Symbol {
+        return self
+            .node_id_to_symbol
+            .get(&node.id)
+            .expect(&format!("{node:?} not there"))
+            .clone();
     }
     pub fn iter_item_ty(&self, ty: Type) -> Option<Type> {
         match ty {
@@ -273,7 +319,7 @@ impl<'a> Context<'a> {
         return ScopeId(s);
     }
     pub fn get_scope_immut(&self, node_id: usize) -> Option<ScopeId> {
-        self.scopes_by_node_id.get(&node_id).map(|e|*e)
+        self.scopes_by_node_id.get(&node_id).map(|e| *e)
     }
     fn get_scope_from_node_id(&mut self, node_id: usize) -> ScopeId {
         self.scopes_by_node_id

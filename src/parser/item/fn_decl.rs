@@ -1,5 +1,5 @@
 use crate::parser::{
-    ast::{FunctionDeclaration, Parameters, TypeExpr, Node},
+    ast::{FunctionDeclaration, Node, Parameters, TypeExpr},
     expr::block::parse_block,
     lexer::Token,
     parse_pattern, parse_type, ParseError, Parser, SymbolName,
@@ -21,7 +21,9 @@ fn parse_fn_params(parser: &mut Parser) -> Result<Parameters, ParseError> {
     Ok(params)
 }
 
-pub(super) fn parse_fn_declaration(parser: &mut Parser) -> Result<Node<FunctionDeclaration>, ParseError> {
+pub(super) fn parse_fn_declaration(
+    parser: &mut Parser,
+) -> Result<Node<FunctionDeclaration>, ParseError> {
     parser.expect_token(Token::Fn)?;
     let name = parser.expect_token(Token::Identifier)?.to_owned();
 
