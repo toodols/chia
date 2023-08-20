@@ -1,19 +1,21 @@
 use crate::parser::{
     ast::{Node, Path, SymbolName},
     lexer::Token,
-    ParseError, Parser,
+    ParseError, Parser, Sources,
 };
 
-pub(in crate::parser) fn parse_expr_path(parser: &mut Parser) -> Result<Node<Path>, ParseError> {
-    let mut path = Vec::new();
-    if parser.peek_token() == Some(Token::Identifier) {
-        parser.next_token();
-        path.push(parser.slice_token().to_owned());
+impl<T: Sources> Parser<'_, T> {
+    pub(in crate::parser) fn parse_expr_path(&mut self) -> Result<Node<Path>, ParseError> {
+        let mut path = Vec::new();
+        if self.peek_token() == Some(Token::Identifier) {
+            self.next_token();
+            path.push(self.slice_token().to_owned());
+        }
+        while self.peek_token() == Some(Token::Scope) {
+            self.next_token();
+            self.expect_token(Token::Identifier)?;
+            path.push(self.slice_token().to_owned());
+        }
+        Ok(self.node(Path(path.into_iter().map(SymbolName::External).collect())))
     }
-    while parser.peek_token() == Some(Token::Scope) {
-        parser.next_token();
-        parser.expect_token(Token::Identifier)?;
-        path.push(parser.slice_token().to_owned());
-    }
-    Ok(parser.node(Path(path.into_iter().map(SymbolName::External).collect())))
 }

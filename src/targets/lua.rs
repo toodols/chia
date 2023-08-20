@@ -10,6 +10,11 @@ use crate::{
 // which is certainly helpful for avoiding naming conflict
 // but also makes it impossible to reference global variables reliably
 
+// random note: what if when writing a symbol as a string
+// you check up the chain to see whether it conflicts with anything
+// this has the added benefit that all global symbols will always keep their symbolname
+
+// addendum #2: what if you just preserve names in global scope but do {name}_{scope} bullshit
 fn transpile_expr(
     source: &mut String,
     scope: ScopeId,
@@ -24,7 +29,17 @@ fn transpile_expr(
         Expression::UnaryOperation(_) => todo!(),
         Expression::Literal(Node { inner, .. }) => match inner {
             Literal::Unit => source.push_str("nil"),
-            Literal::Array(_) => todo!(),
+            Literal::Array(t) => {
+                source.push_str("{");
+                let len = t.len();
+                for (i, expr) in t.iter().enumerate() {
+                    transpile_expr(source, scope, expr, ctx).unwrap();
+                    if i != len - 1 {
+                        source.push_str(", ")
+                    }
+                }
+                source.push_str("}")
+            }
             Literal::ArraySized(_, _) => todo!(),
             Literal::Number(num) => source.push_str(&num.to_string()),
             Literal::String(s) => source.push_str(&format!("{s:?}")),
@@ -151,12 +166,12 @@ fn transpile_block(
 
 pub fn lua(Node { inner, id }: &Node<Program>, ctx: &Context<'_>) -> String {
     let mut source = String::new();
-	let mut main = None;
+    let mut main = None;
     for p in inner.items.iter() {
         match p {
             Item::FunctionDeclaration(node @ Node { inner: fn_decl, id }) => {
                 if fn_decl.name.ident() == "main" {
-					main = Some(fn_decl);
+                    main = Some(fn_decl);
                     continue;
                 }
                 let name = ctx.get_node_symbol(node).ident();
@@ -174,10 +189,13 @@ pub fn lua(Node { inner, id }: &Node<Program>, ctx: &Context<'_>) -> String {
             }
             Item::TupleStructDeclaration(_) => todo!(),
             Item::StructDeclaration(_) => todo!(),
+            Item::Mod(Node { inner, id }) => {
+                source.push_str("-- module goes here\n");
+            }
         }
     }
-	
-	transpile_block(&mut source, &main.unwrap().body, ctx).unwrap();
+
+    transpile_block(&mut source, &main.unwrap().body, ctx).unwrap();
 
     source
 }

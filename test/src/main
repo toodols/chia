@@ -1,0 +1,8 @@
+mod helper;
+
+fn main() {
+    let i = 2;
+    for i in 0..100 {
+        // print(i);
+    }
+}

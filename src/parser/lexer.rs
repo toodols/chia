@@ -97,8 +97,6 @@ pub enum Token {
     Comment,
     #[regex("[ \t\n]+", logos::skip)]
     Whitespace,
-    #[error]
-    Error,
     #[token("..")]
     Range,
     #[token(":")]

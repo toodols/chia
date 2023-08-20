@@ -222,21 +222,21 @@ impl<'a> Symtab<'a> {
     /// Resolve a type expression into a real type.
     pub fn get_type(&self, scope: ScopeId, expr: &TypeExpr) -> Type {
         // ScopeId(0) is the global scope
-        if scope == ScopeId(0) {
-            match expr {
-                TypeExpr::Identifier(name) => {
-                    return match name.as_str() {
-                        "number" => Type::Number,
-                        "string" => Type::String,
-                        "boolean" => Type::Boolean,
-                        t => panic!("{t}"),
-                    }
+        //      doesn't matter. get type from any scope.
+        // if scope == ScopeId(0) {
+        match expr {
+            TypeExpr::Identifier(name) => {
+                return match name.as_str() {
+                    "number" => Type::Number,
+                    "string" => Type::String,
+                    "boolean" => Type::Boolean,
+                    t => panic!("{t}"),
                 }
-                TypeExpr::Unit => return Type::Unit,
-                _ => panic!(),
             }
+            TypeExpr::Unit => return Type::Unit,
+            _ => panic!(),
         }
-        todo!("getting types for not global scope")
+        // }
     }
 }
 

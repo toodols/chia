@@ -79,6 +79,13 @@ pub enum Item {
     FunctionDeclaration(Node<FunctionDeclaration>),
     TupleStructDeclaration(Node<TupleStructDeclaration>),
     StructDeclaration(Node<StructDeclaration>),
+    Mod(Node<Mod>),
+}
+
+#[derive(Debug, Clone)]
+pub struct Mod {
+    pub name: String,
+    pub body: Node<Program>,
 }
 
 #[derive(Debug, Clone, Copy)]

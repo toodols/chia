@@ -1,0 +1,52 @@
+Context {
+    symtab: Symtab {
+        variables: {
+            main@1: (
+                Function(
+                    [],
+                    Unit,
+                ),
+                FunctionDeclaration("main"),
+            ),
+            i@3: (
+                Number,
+                ForLoop("i"),
+            ),
+            i@2: (
+                Number,
+                LetDeclaration("i"),
+            ),
+        },
+        types: {},
+        structs: {},
+        parents: {
+            ScopeId(
+                2,
+            ): ScopeId(
+                1,
+            ),
+            ScopeId(
+                3,
+            ): ScopeId(
+                2,
+            ),
+        },
+    },
+    node_id_to_symbol: {
+        5: i@2,
+        16: main@1,
+        8: i@3,
+    },
+    scopes_by_node_id: {
+        13: ScopeId(
+            3,
+        ),
+        17: ScopeId(
+            1,
+        ),
+        15: ScopeId(
+            2,
+        ),
+    },
+    scope_counter: 4,
+}

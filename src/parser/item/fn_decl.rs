@@ -1,60 +1,58 @@
 use crate::parser::{
     ast::{FunctionDeclaration, Node, Parameters, TypeExpr},
-    expr::block::parse_block,
     lexer::Token,
-    parse_pattern, parse_type, ParseError, Parser, SymbolName,
+    ParseError, Parser, Sources, SymbolName,
 };
 
-fn parse_fn_params(parser: &mut Parser) -> Result<Parameters, ParseError> {
-    parser.expect_token(Token::LParen)?;
-    let mut params = Parameters::new();
-    while parser.peek_token() != Some(Token::RParen) {
-        let pat = parse_pattern(parser)?;
-        parser.expect_token(Token::Colon)?;
-        let param_type = parse_type(parser)?;
-        params.0.push((pat, param_type));
-        if parser.peek_token() == Some(Token::Comma) {
-            parser.next_token();
+impl<T: Sources> Parser<'_, T> {
+    fn parse_fn_params(&mut self) -> Result<Parameters, ParseError> {
+        self.expect_token(Token::LParen)?;
+        let mut params = Parameters::new();
+        while self.peek_token() != Some(Token::RParen) {
+            let pat = self.parse_pattern()?;
+            self.expect_token(Token::Colon)?;
+            let param_type = self.parse_type()?;
+            params.0.push((pat, param_type));
+            if self.peek_token() == Some(Token::Comma) {
+                self.next_token();
+            }
         }
+        self.expect_token(Token::RParen)?;
+        Ok(params)
     }
-    parser.expect_token(Token::RParen)?;
-    Ok(params)
-}
 
-pub(super) fn parse_fn_declaration(
-    parser: &mut Parser,
-) -> Result<Node<FunctionDeclaration>, ParseError> {
-    parser.expect_token(Token::Fn)?;
-    let name = parser.expect_token(Token::Identifier)?.to_owned();
+    pub(super) fn parse_fn_declaration(&mut self) -> Result<Node<FunctionDeclaration>, ParseError> {
+        self.expect_token(Token::Fn)?;
+        let name = self.expect_token(Token::Identifier)?.to_owned();
 
-    let parameters = match parser.peek_token() {
-        Some(Token::LParen) => parse_fn_params(parser)?,
+        let parameters = match self.peek_token() {
+            Some(Token::LParen) => self.parse_fn_params()?,
 
-        // Allows `fn foo {}` syntax in contrast to `fn foo() {}` always required
-        // Some(Token::Arrow) => vec![],
-        // Some(Token::LBrace) => vec![],
-        _ => {
-            return Err(ParseError::Unknown);
-        }
-    };
-    let parameters = parser.node(parameters);
+            // Allows `fn foo {}` syntax in contrast to `fn foo() {}` always required
+            // Some(Token::Arrow) => vec![],
+            // Some(Token::LBrace) => vec![],
+            _ => {
+                return Err(ParseError::Unknown);
+            }
+        };
+        let parameters = self.node(parameters);
+        let return_type = match self.peek_token() {
+            Some(Token::Arrow) => {
+                self.expect_token(Token::Arrow)?;
+                self.parse_type()?
+            }
+            Some(Token::LBrace) => self.node(TypeExpr::Unit),
+            _ => {
+                return Err(ParseError::Unknown);
+            }
+        };
 
-    let return_type = match parser.peek_token() {
-        Some(Token::Arrow) => {
-            parser.expect_token(Token::Arrow)?;
-            parse_type(parser)?
-        }
-        Some(Token::LBrace) => parser.node(TypeExpr::Unit),
-        _ => {
-            return Err(ParseError::Unknown);
-        }
-    };
-
-    let body = parse_block(parser)?;
-    Ok(parser.node(FunctionDeclaration {
-        name: SymbolName::External(name),
-        parameters,
-        body,
-        return_type,
-    }))
+        let body = self.parse_block()?;
+        Ok(self.node(FunctionDeclaration {
+            name: SymbolName::External(name),
+            parameters,
+            body,
+            return_type,
+        }))
+    }
 }

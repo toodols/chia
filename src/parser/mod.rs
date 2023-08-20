@@ -3,17 +3,15 @@ mod expr;
 mod item;
 
 mod lexer;
+use std::collections::HashMap;
 use std::ops::Range;
+use std::sync::Arc;
 
 use ast::*;
 use lexer::Token;
 use logos::Logos;
 use std::fmt::Debug;
 use thiserror::Error;
-
-use self::expr::parse_expression;
-use self::expr::path::parse_expr_path;
-use self::item::parse_item;
 
 struct Tokens<'a> {
     tokens: logos::Lexer<'a, Token>,
@@ -30,24 +28,24 @@ impl<'a> Tokens<'a> {
     }
     fn peek_token_with_pos(&mut self) -> Option<(Token, SourceLocation)> {
         if self.peeked.is_none() {
-            if let Some(token) = self.tokens.next() {
-                return Some(
+            return match self.tokens.next() {
+                Some(Ok(token)) => Some(
                     self.peeked
                         .insert((token, SourceLocation::range(self.tokens.span())))
                         .clone(),
-                );
-            } else {
-                return None;
-            }
+                ),
+                _ => None,
+            };
         }
         self.peeked.clone()
     }
     fn next_token_with_pos(&mut self) -> Option<(Token, SourceLocation)> {
         let token = self.peeked.take();
         if token.is_none() {
-            self.tokens
-                .next()
-                .map(|token| (token, SourceLocation::range(self.tokens.span())))
+            match self.tokens.next() {
+                Some(Ok(token)) => Some((token, SourceLocation::range(self.tokens.span()))),
+                _ => None,
+            }
         } else {
             token
         }
@@ -56,7 +54,6 @@ impl<'a> Tokens<'a> {
     fn expect_token(&mut self, token: Token) -> Result<&str, ParseError> {
         // thank you, copilot
         let t = match self.next_token_with_pos() {
-            Some((Token::Error, _)) => Err(ParseError::LexError),
             Some((t, _)) if t == token => Ok(self.tokens.slice()),
             Some((t, pos)) => Err(ParseError::UnexpectedToken { token: t, at: pos }),
             None => Err(ParseError::UnexpectedEOF),
@@ -100,14 +97,21 @@ pub enum ParseError {
     Message(String),
 }
 
-struct Parser<'a> {
-    node_id_counter: usize,
-    tokens: Tokens<'a>,
+pub trait Sources {
+    fn get(&self, path: &std::path::Path) -> Option<&str>;
+    fn child(&self, path: &std::path::Path, child: &str) -> Option<&std::path::Path>;
 }
 
-impl<'a> Parser<'a> {
+pub(crate) struct Parser<'a, T: Sources> {
+    node_id_counter: usize,
+    tokens: Tokens<'a>,
+    path: &'a std::path::Path,
+    sources: &'a T,
+}
+
+impl<'a, T: Sources> Parser<'a, T> {
     /// Constructs a unique node from a given value
-    fn node<T: Debug + Clone>(&mut self, value: T) -> Node<T> {
+    fn node<Innner: Debug + Clone>(&mut self, value: Innner) -> Node<Innner> {
         Node {
             inner: value,
             id: self.node_id(),
@@ -131,11 +135,28 @@ impl<'a> Parser<'a> {
     fn expect_token(&mut self, token: Token) -> Result<&str, ParseError> {
         self.tokens.expect_token(token)
     }
-    fn new(source: &'a str) -> Parser<'a> {
+
+    pub(crate) fn new<'s, S: Sources>(sources: &'s S) -> Parser<'s, S> {
+        let s = sources.get(std::path::Path::new("")).unwrap();
         Parser {
             node_id_counter: 0,
-            tokens: Tokens::new(source),
+            path: std::path::Path::new(""),
+            tokens: Tokens::new(s),
+            sources: &sources,
         }
+    }
+    fn parse_child(&self, name: &str) -> Result<Node<Program>, ParseError> {
+        let child_path = self
+            .sources
+            .child(self.path, name)
+            .ok_or_else(|| ParseError::Unknown)?;
+        let mut parser = Parser {
+            node_id_counter: 0,
+            path: child_path,
+            sources: self.sources.clone(),
+            tokens: Tokens::new(self.sources.get(child_path).unwrap()),
+        };
+        parser.parse_program()
     }
     /// Gives a unique node id
     fn node_id(&mut self) -> usize {
@@ -145,37 +166,96 @@ impl<'a> Parser<'a> {
     }
 }
 
-fn parse_fn_call_body(parser: &mut Parser) -> Result<Vec<Expression>, ParseError> {
-    parser.expect_token(Token::LParen)?;
-    let mut args = Vec::new();
-    loop {
-        match parser.peek_token() {
-            Some(Token::RParen) => {
-                break;
+impl<T: Sources> Parser<'_, T> {
+    fn parse_fn_call_body(&mut self) -> Result<Vec<Expression>, ParseError> {
+        self.expect_token(Token::LParen)?;
+        let mut args = Vec::new();
+        loop {
+            match self.peek_token() {
+                Some(Token::RParen) => {
+                    break;
+                }
+                Some(_) => {
+                    args.push(self.parse_expression()?);
+                    match self.peek_token_with_pos() {
+                        Some((Token::Comma, _)) => {
+                            self.next_token();
+                        }
+                        Some((Token::RParen, _)) => {
+                            break;
+                        }
+                        Some((t, pos)) => {
+                            return Err(ParseError::UnexpectedToken { token: t, at: pos })
+                        }
+                        None => return Err(ParseError::UnexpectedEOF),
+                    };
+                }
+                None => return Err(ParseError::UnexpectedEOF),
             }
-            Some(Token::Error) => return Err(ParseError::LexError),
-            Some(_) => {
-                args.push(parse_expression(parser)?);
-                match parser.peek_token_with_pos() {
-                    Some((Token::Comma, _)) => {
-                        parser.next_token();
-                    }
-                    Some((Token::RParen, _)) => {
-                        break;
-                    }
-                    Some((t, pos)) => {
-                        return Err(ParseError::UnexpectedToken { token: t, at: pos })
-                    }
-                    None => return Err(ParseError::UnexpectedEOF),
-                };
+        }
+        self.expect_token(Token::RParen)?;
+        Ok(args)
+    }
+
+    fn parse_let_declaration(&mut self) -> Result<Node<LetDeclaration>, ParseError> {
+        self.expect_token(Token::Let)?;
+        let pat = self.parse_pattern()?;
+
+        if self.peek_token() == Some(Token::Assign) {
+            self.expect_token(Token::Assign)?;
+            let value = self.parse_expression()?;
+            if !value.terminating() {
+                self.expect_token(Token::Semicolon)?;
             }
-            None => return Err(ParseError::UnexpectedEOF),
+            Ok(self.node(LetDeclaration {
+                pat,
+                value: Some(value),
+            }))
+        } else {
+            self.expect_token(Token::Semicolon)?;
+            Ok(self.node(LetDeclaration { pat, value: None }))
         }
     }
-    parser.expect_token(Token::RParen)?;
-    Ok(args)
-}
 
+    fn parse_pattern(&mut self) -> Result<Pattern, ParseError> {
+        let path = self.parse_expr_path()?;
+        Ok(Pattern::Path(path))
+    }
+
+    fn parse_type(&mut self) -> Result<Node<TypeExpr>, ParseError> {
+        match self.next_token_with_pos() {
+            Some((Token::Identifier, _)) => {
+                Ok(self.node(TypeExpr::Identifier(self.slice_token().to_owned())))
+            }
+            Some((Token::LParen, _)) => {
+                if self.peek_token() == Some(Token::RParen) {
+                    self.next_token();
+                    return Ok(self.node(TypeExpr::Unit));
+                }
+                let mut types = Vec::new();
+                types.push(self.parse_type()?);
+                while self.peek_token() == Some(Token::Comma) {
+                    self.next_token();
+                    types.push(self.parse_type()?);
+                }
+                self.expect_token(Token::RParen)?;
+                Ok(self.node(TypeExpr::Tuple(types)))
+            }
+            Some((t, pos)) => Err(ParseError::UnexpectedToken { token: t, at: pos }),
+            None => Err(ParseError::UnexpectedEOF),
+        }
+    }
+
+    pub(crate) fn parse_program(&mut self) -> Result<Node<Program>, ParseError> {
+        let node_id = self.node_id();
+        let mut items = Vec::new();
+        while self.peek_token().is_some() {
+            items.push(self.parse_item()?);
+        }
+        println!("finished parsing");
+        Ok(self.node(Program { items }))
+    }
+}
 // don't even bother trying to include macros in this shit language
 // #[allow(unused)]
 // fn parse_macro_invocation(parser: &mut Parser) -> Result<Vec<Token>, ParseError> {
@@ -234,67 +314,18 @@ fn parse_fn_call_body(parser: &mut Parser) -> Result<Vec<Expression>, ParseError
 //     Ok(matched)
 // }
 
-fn parse_let_declaration(parser: &mut Parser) -> Result<Node<LetDeclaration>, ParseError> {
-    parser.expect_token(Token::Let)?;
-    let pat = parse_pattern(parser)?;
+pub fn parse<'a>(source: &'a str) -> Result<Node<Program>, ParseError> {
+    struct SingleSource<'a>(&'a str);
 
-    if parser.peek_token() == Some(Token::Assign) {
-        parser.expect_token(Token::Assign)?;
-        let value = parse_expression(parser)?;
-        if !value.terminating() {
-            parser.expect_token(Token::Semicolon)?;
+    impl<'a> Sources for SingleSource<'a> {
+        fn get(&self, path: &std::path::Path) -> Option<&str> {
+            None
         }
-        Ok(parser.node(LetDeclaration {
-            pat,
-            value: Some(value),
-        }))
-    } else {
-        parser.expect_token(Token::Semicolon)?;
-        Ok(parser.node(LetDeclaration { pat, value: None }))
-    }
-}
-
-fn parse_pattern(parser: &mut Parser) -> Result<Pattern, ParseError> {
-    let path = parse_expr_path(parser)?;
-    Ok(Pattern::Path(path))
-}
-
-fn parse_type(parser: &mut Parser) -> Result<Node<TypeExpr>, ParseError> {
-    match parser.next_token_with_pos() {
-        Some((Token::Identifier, _)) => {
-            Ok(parser.node(TypeExpr::Identifier(parser.slice_token().to_owned())))
+        fn child(&self, path: &std::path::Path, child: &str) -> Option<&std::path::Path> {
+            None
         }
-        Some((Token::LParen, _)) => {
-            if parser.peek_token() == Some(Token::RParen) {
-                parser.next_token();
-                return Ok(parser.node(TypeExpr::Unit));
-            }
-            let mut types = Vec::new();
-            types.push(parse_type(parser)?);
-            while parser.peek_token() == Some(Token::Comma) {
-                parser.next_token();
-                types.push(parse_type(parser)?);
-            }
-            parser.expect_token(Token::RParen)?;
-            Ok(parser.node(TypeExpr::Tuple(types)))
-        }
-        Some((Token::Error, _)) => Err(ParseError::LexError),
-        Some((t, pos)) => Err(ParseError::UnexpectedToken { token: t, at: pos }),
-        None => Err(ParseError::UnexpectedEOF),
     }
-}
-
-fn parse_program(parser: &mut Parser) -> Result<Node<Program>, ParseError> {
-    let node_id = parser.node_id();
-    let mut items = Vec::new();
-    while parser.peek_token().is_some() {
-        items.push(parse_item(parser)?);
-    }
-    println!("finished parsing");
-    Ok(parser.node(Program { items }))
-}
-
-pub fn parse(source: &str) -> Result<Node<Program>, ParseError> {
-    let mut parser = Parser::new(source);
-    parse_program(&mut parser)
+    let binding = SingleSource(source);
+    let mut parser = Parser::<'a, SingleSource<'a>>::new(&binding);
+    parser.parse_program()
 }

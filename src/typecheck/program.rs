@@ -7,9 +7,12 @@ use super::{
 
 pub fn typecheck_program(Node { inner, id }: &Node<Program>) -> CompilerResult<Context<'_>> {
     let mut context = Context::new();
-    let global_scope = context.get_scope_from_node_id(*id);
+    // global scope is reserved for items built in.
+    let _global_scope = context.get_new_scope();
+
+    let program_scope = context.get_scope_from_node_id(*id);
     let state = State {
-        scope: global_scope,
+        scope: program_scope,
         ..Default::default()
     };
     {
@@ -19,7 +22,7 @@ pub fn typecheck_program(Node { inner, id }: &Node<Program>) -> CompilerResult<C
                 Item::FunctionDeclaration(Node { inner, id }) => {
                     let symbol = Symbol {
                         name: inner.name.clone(),
-                        scope: global_scope,
+                        scope: program_scope,
                         ..Default::default()
                     };
                     context.node_id_to_symbol.insert(*id, symbol.clone());
@@ -33,13 +36,13 @@ pub fn typecheck_program(Node { inner, id }: &Node<Program>) -> CompilerResult<C
                                     .0
                                     .iter()
                                     .map(|(_, ty_expr)| {
-                                        context.symtab.get_type(global_scope, &ty_expr.inner)
+                                        context.symtab.get_type(program_scope, &ty_expr.inner)
                                     })
                                     .collect(),
                                 Box::new(
                                     context
                                         .symtab
-                                        .get_type(global_scope, &inner.return_type.inner),
+                                        .get_type(program_scope, &inner.return_type.inner),
                                 ),
                             ),
                             NodeRef::FunctionDeclaration(inner),
@@ -47,9 +50,15 @@ pub fn typecheck_program(Node { inner, id }: &Node<Program>) -> CompilerResult<C
                     );
                 }
                 Item::TupleStructDeclaration(decl) => {
+                    todo!("Typecheck tuple struct declaration")
+                }
+                Item::Mod(another_program) => {
+                    typecheck_program(&another_program.inner.body)?;
+                    println!("idk what to do from here");
+                }
+                Item::StructDeclaration(decl) => {
                     todo!("Typecheck struct declaration")
                 }
-                _ => todo!(""),
             }
         }
 
@@ -58,6 +67,7 @@ pub fn typecheck_program(Node { inner, id }: &Node<Program>) -> CompilerResult<C
                 Item::FunctionDeclaration(func) => {
                     context = typecheck_function_declaration(context, state.clone(), func)?;
                 }
+                Item::Mod(_) => {}
                 _ => todo!(),
             }
         }

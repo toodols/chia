@@ -4,6 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-logos = "0.12.1"
+logos = "0.13.0"
 thiserror = "1.0.40"
 xml-rs = "0.8.4"
+proc-macro2 = "1.0.66"
+
+[dev-dependencies]
+include_dir = "0.7.3"

@@ -1,28 +1,28 @@
 use crate::parser::{
     ast::{Expression, IfExpression, Node},
     lexer::Token,
-    ParseError, Parser,
+    ParseError, Parser, Sources,
 };
 
-use super::{block::parse_block, parse_expression};
-
-pub(super) fn parse_if_expr(parser: &mut Parser) -> Result<Node<IfExpression>, ParseError> {
-    parser.expect_token(Token::If)?;
-    let condition = parse_expression(parser)?;
-    let body = Box::new(Expression::Block(parse_block(parser)?));
-    let else_body = if parser.peek_token() == Some(Token::Else) {
-        parser.next_token();
-        if parser.peek_token() == Some(Token::If) {
-            Some(Box::new(Expression::IfExpression(parse_if_expr(parser)?)))
+impl<T: Sources> Parser<'_, T> {
+    pub(super) fn parse_if_expr(&mut self) -> Result<Node<IfExpression>, ParseError> {
+        self.expect_token(Token::If)?;
+        let condition = self.parse_expression()?;
+        let body = Box::new(Expression::Block(self.parse_block()?));
+        let else_body = if self.peek_token() == Some(Token::Else) {
+            self.next_token();
+            if self.peek_token() == Some(Token::If) {
+                Some(Box::new(Expression::IfExpression(self.parse_if_expr()?)))
+            } else {
+                Some(Box::new(Expression::Block(self.parse_block()?)))
+            }
         } else {
-            Some(Box::new(Expression::Block(parse_block(parser)?)))
-        }
-    } else {
-        None
-    };
-    Ok(parser.node(IfExpression {
-        condition: Box::new(condition),
-        body,
-        else_body,
-    }))
+            None
+        };
+        Ok(self.node(IfExpression {
+            condition: Box::new(condition),
+            body,
+            else_body,
+        }))
+    }
 }
