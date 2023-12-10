@@ -1,9 +1,9 @@
 use crate::parser::{
-    ast::{Expression, ForLoop, Node},
+    ast::{Expression, ForLoop},
     lexer::Token,
     ParseError, Parser, Sources,
 };
-impl<T: Sources> Parser<'_, T> {
+impl Parser<'_> {
     pub(super) fn parse_loops(&mut self) -> Result<Expression, ParseError> {
         match self.peek_token() {
             // Some(Token::While) => Ok(Loop::While(self.parse_while_loop()?)),
@@ -12,16 +12,16 @@ impl<T: Sources> Parser<'_, T> {
         }
     }
 
-    fn parse_for_loop(&mut self) -> Result<Node<ForLoop>, ParseError> {
+    fn parse_for_loop(&mut self) -> Result<ForLoop, ParseError> {
         self.expect_token(Token::For)?;
         let pat = self.parse_pattern()?;
         self.expect_token(Token::In)?;
         let iter = Box::new(self.parse_expression()?);
         let block = self.parse_block()?;
-        Ok(self.node(ForLoop {
+        Ok(ForLoop {
             pat,
             iter,
             body: block,
-        }))
+        })
     }
 }

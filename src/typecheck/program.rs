@@ -1,59 +1,68 @@
-use crate::parser::ast::{Item, Node, Program};
+use crate::parser::ast::{Item, Program};
 
 use super::{
     fn_decl::typecheck_function_declaration, CompilerResult, Context, NodeRef, State, Symbol,
-    Symtab, Type,
+    Symtab, Type, VarSymbolDetails,
 };
 
-pub fn typecheck_program(Node { inner, id }: &Node<Program>) -> CompilerResult<Context<'_>> {
-    let mut context = Context::new();
+pub fn typecheck_program<'ctx, 'nodes>(
+    context: &'ctx mut Context<'nodes>,
+    program: &'nodes Program,
+) -> CompilerResult<()> {
     // global scope is reserved for items built in.
-    let _global_scope = context.get_new_scope();
+    let global_scope = context.get_new_scope();
 
-    let program_scope = context.get_scope_from_node_id(*id);
+    let program_scope = context.get_new_scope();
+    context.scopes_by_node_id.insert(program.id, program_scope);
+    context.symtab.parents.insert(program_scope, global_scope);
     let state = State {
         scope: program_scope,
         ..Default::default()
     };
     {
-        let mut context = &mut context;
-        for item in inner.items.iter() {
+        // let mut context = &mut context;
+        for item in program.items.iter() {
             match item {
-                Item::FunctionDeclaration(Node { inner, id }) => {
-                    let symbol = Symbol {
-                        name: inner.name.clone(),
-                        scope: program_scope,
-                        ..Default::default()
-                    };
-                    context.node_id_to_symbol.insert(*id, symbol.clone());
+                Item::FunctionDeclaration(fn_decl) => {
+                    let symbol = context.get_new_symbol();
+                    // let symbol = Symbol {
+                    //     name: fn_decl.span.clone(),
+                    //     scope: program_scope,
+                    //     ..Default::default()
+                    // };
+                    context.node_id_to_symbol.insert(fn_decl.id, symbol.clone());
                     context.symtab.variables.insert(
                         symbol,
-                        (
-                            Type::Function(
-                                inner
+                        fn_decl.span.to_string(),
+                        program_scope,
+                        VarSymbolDetails {
+                            ty: Type::Function(
+                                fn_decl
                                     .parameters
-                                    .inner
                                     .0
                                     .iter()
                                     .map(|(_, ty_expr)| {
-                                        context.symtab.get_type(program_scope, &ty_expr.inner)
+                                        context.get_type(program_scope, &ty_expr).expect(
+                                            format!("parameter type not found {ty_expr:?}")
+                                                .as_str(),
+                                        )
                                     })
                                     .collect(),
                                 Box::new(
                                     context
-                                        .symtab
-                                        .get_type(program_scope, &inner.return_type.inner),
+                                        .get_type(program_scope, &fn_decl.return_type)
+                                        .expect("return type not found"),
                                 ),
                             ),
-                            NodeRef::FunctionDeclaration(inner),
-                        ),
+                            node_ref: Some(NodeRef::FunctionDeclaration(fn_decl)),
+                        },
                     );
                 }
                 Item::TupleStructDeclaration(decl) => {
                     todo!("Typecheck tuple struct declaration")
                 }
                 Item::Mod(another_program) => {
-                    typecheck_program(&another_program.inner.body)?;
+                    typecheck_program(context, &another_program.body)?;
                     println!("idk what to do from here");
                 }
                 Item::StructDeclaration(decl) => {
@@ -62,15 +71,15 @@ pub fn typecheck_program(Node { inner, id }: &Node<Program>) -> CompilerResult<C
             }
         }
 
-        for item in inner.items.iter() {
+        for item in program.items.iter() {
             match item {
                 Item::FunctionDeclaration(func) => {
-                    context = typecheck_function_declaration(context, state.clone(), func)?;
+                    typecheck_function_declaration(context, state.clone(), func)?;
                 }
                 Item::Mod(_) => {}
                 _ => todo!(),
             }
         }
     }
-    Ok(context)
+    Ok(())
 }

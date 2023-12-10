@@ -11,37 +11,23 @@ mod fn_decl;
 mod program;
 mod stmt;
 
-impl Debug for SymbolName {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            SymbolName::External(name) => write!(f, "{:?}", name),
-            SymbolName::Internal(id) => write!(f, "<{:?}>", id),
-        }
-    }
-}
+// impl Debug for SymbolName {
+//     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+//         match self {
+//             SymbolName::External(name) => write!(f, "{:?}", name),
+//             SymbolName::Internal(id) => write!(f, "<{:?}>", id),
+//         }
+//     }
+// }
 
-#[derive(Clone, PartialEq, Eq, Hash)]
-pub struct Symbol {
-    pub name: SymbolName,
-    pub field_of: Option<Box<Symbol>>,
-    pub scope: ScopeId,
-}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Default)]
+pub struct Symbol(usize);
 
-impl Symbol {
-    pub fn ident(&self) -> String {
-        format!("{}_{}", self.name.ident(), self.scope)
-    }
-}
-
-impl Default for Symbol {
-    fn default() -> Self {
-        Self {
-            name: SymbolName::Internal(0),
-            field_of: None,
-            scope: ScopeId(0),
-        }
-    }
-}
+// impl Default for Symbol {
+//     fn default() -> Self {
+//         Self(0)
+//     }
+// }
 
 /*
     struct A;
@@ -54,22 +40,22 @@ impl Default for Symbol {
     }
 */
 
-impl Debug for Symbol {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let Symbol {
-            name,
-            scope,
-            field_of,
-        } = self;
-        if let Some(field_of) = field_of {
-            write!(f, "{:?}", field_of);
-        }
-        match name {
-            SymbolName::External(name) => write!(f, "{}@{}", name, scope),
-            SymbolName::Internal(id) => write!(f, "{}@{}", id, scope),
-        }
-    }
-}
+// impl Debug for Symbol {
+//     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+//         let Symbol {
+//             name,
+//             scope,
+//             field_of,
+//         } = self;
+//         if let Some(field_of) = field_of {
+//             write!(f, "{:?}", field_of);
+//         }
+//         match name {
+//             SymbolName::External(name) => write!(f, "{}@{}", name, scope),
+//             SymbolName::Internal(id) => write!(f, "{}@{}", id, scope),
+//         }
+//     }
+// }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Type {
@@ -107,22 +93,31 @@ impl Type {
 }
 
 impl Pattern {
-    // Decompose a pattern into its symbols against a type
-    pub fn decompose(&self, ty: &Type) -> CompilerResult<Vec<(usize, Type)>> {
+    pub fn decompose_symbols(&self, ctx: &Context) -> Vec<(&Path, Symbol)> {
+        let mut symbols = Vec::new();
+        match self {
+            Pattern::Path(path) => {
+                symbols.push((path, *ctx.node_id_to_symbol.get(&path.id).unwrap()))
+            }
+            _ => todo!(),
+        }
+        symbols
+    }
+    /// Decompose a pattern into its symbols against a type
+    /// assumes all paths are singles for now
+    pub fn decompose(&self, ctx: &Context, ty: &Type) -> CompilerResult<Vec<(&Path, Type)>> {
         let mut symbols = HashMap::new();
 
         match self {
             Pattern::Path(path) => {
-                let uhoh = symbols
-                    .insert(path.inner.symbol(), (path.id, ty.clone()))
-                    .is_some();
-                if uhoh {
+                if symbols.insert(path.last(), (path, ty.clone())).is_some() {
                     return Err(CompilerError::VariableAlreadyExists(format!(
                         "Symbol {:?} already exists in pattern",
-                        path.inner.symbol()
+                        ctx.get_path_ty(path).unwrap(),
                     )));
                 }
             }
+            Pattern::Tuple(_) => todo!(),
         }
         Ok(symbols.into_values().collect())
     }
@@ -136,11 +131,11 @@ pub enum NodeRef<'a> {
 impl<'a> Debug for NodeRef<'a> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            NodeRef::FunctionDeclaration(func) => write!(f, "FunctionDeclaration({:?})", func.name),
+            NodeRef::FunctionDeclaration(func) => write!(f, "FunctionDeclaration({:?})", func.span),
             NodeRef::LetDeclaration(decl) => {
-                write!(f, "LetDeclaration({:?})", decl.pat.as_path_symbol())
+                write!(f, "LetDeclaration({:?})", decl.pat)
             }
-            NodeRef::ForLoop(loop_) => write!(f, "ForLoop({:?})", loop_.pat.as_path_symbol()),
+            NodeRef::ForLoop(loop_) => write!(f, "ForLoop({:?})", loop_.pat),
         }
     }
 }
@@ -179,64 +174,142 @@ let instance = S {s: 1};
 */
 
 #[derive(Debug)]
-pub struct Symtab<'a> {
-    pub variables: HashMap<Symbol, (Type, NodeRef<'a>)>,
-    pub types: HashMap<Symbol, (Type, NodeRef<'a>)>,
-    pub structs: HashMap<Symbol, (Type, NodeRef<'a>)>,
-    pub parents: HashMap<ScopeId, ScopeId>,
+pub struct VarSymbolDetails<'a> {
+    ty: Type,
+    node_ref: Option<NodeRef<'a>>,
 }
 
-impl<'a> Symtab<'a> {
-    fn new<'b>() -> Symtab<'b> {
-        Symtab {
-            variables: HashMap::new(),
-            types: HashMap::new(),
-            structs: HashMap::new(),
-            parents: HashMap::new(),
+#[derive(Debug)]
+pub struct TySymbolDetails<'a> {
+    value: Type,
+    node_ref: Option<NodeRef<'a>>,
+}
+
+#[derive(Debug)]
+pub struct Namespace<T: Debug, S: Debug + Eq + PartialEq + Hash + Copy = Symbol> {
+    scopes: HashMap<ScopeId, HashMap<String, S>>,
+    names: HashMap<S, (String, ScopeId)>,
+    values: HashMap<S, T>,
+}
+impl<T: Debug, S: Debug + Eq + PartialEq + Hash + Copy> Default for Namespace<T, S> {
+    fn default() -> Self {
+        Namespace {
+            scopes: HashMap::new(),
+            values: HashMap::new(),
+            names: HashMap::new(),
         }
     }
+}
 
-    /// Get's the first variable with the name in the scope chain
-    pub fn get_variable_symbol(&self, mut scope: ScopeId, name: &SymbolName) -> Option<Symbol> {
+impl<T: Debug, S: Debug + Eq + PartialEq + Hash + Copy> Namespace<T, S> {
+    /// Insert a new `symbol` with `name` at `scope` with `details`
+    fn insert(&mut self, symbol: S, name: String, scope: ScopeId, details: T) {
+        self.scopes
+            .entry(scope)
+            .or_insert_with(HashMap::new)
+            .insert(name.clone(), symbol);
+        self.names.insert(symbol, (name, scope));
+        self.values.insert(symbol, details);
+    }
+    pub fn get(&self, symbol: S) -> Option<&T> {
+        self.values.get(&symbol)
+    }
+    pub fn get_name_and_scope(&self, symbol: S) -> Option<&(String, ScopeId)> {
+        self.names.get(&symbol)
+    }
+    fn get_name_in_scope(&self, scope: ScopeId, name: &String) -> Option<S> {
+        self.scopes
+            .get(&scope)
+            .and_then(|e| e.get(name))
+            .map(|e| *e)
+    }
+    fn get_name_in_scope_chain(
+        &self,
+        parents: &HashMap<ScopeId, ScopeId>,
+        mut scope: ScopeId,
+        name: &String,
+    ) -> Option<S> {
         loop {
-            let sym = Symbol {
-                name: name.clone(),
-                scope,
-                ..Default::default()
-            };
-            if self.variables.contains_key(&sym) {
+            if let Some(sym) = self.get_name_in_scope(scope, name) {
                 return Some(sym);
-            } else if let Some(parent) = self.parents.get(&scope) {
+            }
+            if let Some(parent) = parents.get(&scope) {
                 scope = *parent;
             } else {
                 return None;
             }
         }
     }
+    fn get_value_in_scope_chain(
+        &self,
+        parents: &HashMap<ScopeId, ScopeId>,
+        mut scope: ScopeId,
+        name: &String,
+    ) -> Option<&T> {
+        loop {
+            if let Some(sym) = self.get_name_in_scope(scope, name) {
+                return self.get(sym);
+            }
+            if let Some(parent) = parents.get(&scope) {
+                scope = *parent;
+            } else {
+                return None;
+            }
+        }
+    }
+}
 
-    pub fn get_variable(&self, scope: ScopeId, name: &SymbolName) -> Option<Type> {
-        self.get_variable_symbol(scope, name)
-            .map(|sym| self.variables.get(&sym).unwrap().0.clone())
+#[derive(Debug)]
+pub struct Symtab<'a> {
+    pub variables: Namespace<VarSymbolDetails<'a>>,
+    pub types: Namespace<TySymbolDetails<'a>>,
+
+    pub parents: HashMap<ScopeId, ScopeId>,
+    symbol_counter: usize,
+}
+
+impl<'a> Symtab<'a> {
+    fn new<'b>() -> Symtab<'b> {
+        let mut symtab = Symtab {
+            variables: Namespace::default(),
+            types: Namespace::default(),
+            // structs: Namespace::default(),
+            symbol_counter: 0,
+            parents: HashMap::new(),
+        };
+        symtab.insert_global_ty("number", Type::Number);
+        symtab.insert_global_ty("bool", Type::Boolean);
+        symtab.insert_global_ty("string", Type::String);
+
+        return symtab;
     }
 
-    /// Resolve a type expression into a real type.
-    pub fn get_type(&self, scope: ScopeId, expr: &TypeExpr) -> Type {
-        // ScopeId(0) is the global scope
-        //      doesn't matter. get type from any scope.
-        // if scope == ScopeId(0) {
-        match expr {
-            TypeExpr::Identifier(name) => {
-                return match name.as_str() {
-                    "number" => Type::Number,
-                    "string" => Type::String,
-                    "boolean" => Type::Boolean,
-                    t => panic!("{t}"),
-                }
-            }
-            TypeExpr::Unit => return Type::Unit,
-            _ => panic!(),
-        }
-        // }
+    pub fn insert_global_ty(&mut self, name: &str, value: Type) {
+        let symbol = self.get_new_symbol();
+        self.types.insert(
+            symbol,
+            name.to_owned(),
+            ScopeId(0),
+            TySymbolDetails {
+                value,
+                node_ref: None,
+            },
+        );
+    }
+    pub fn insert_global_var(&mut self, name: &str, ty: Type) {
+        let symbol = self.get_new_symbol();
+        self.variables.insert(
+            symbol,
+            name.to_owned(),
+            ScopeId(0),
+            VarSymbolDetails { ty, node_ref: None },
+        );
+    }
+
+    pub fn get_new_symbol(&mut self) -> Symbol {
+        let s = self.symbol_counter;
+        self.symbol_counter += 1;
+        return Symbol(s);
     }
 }
 
@@ -245,7 +318,8 @@ pub enum CompilerError {
     MismatchedTypes(String),
     AnyError(String),
     VariableAlreadyExists(String),
-    VariableNotFound(SymbolName),
+    VariableNotFound(String),
+    TypeNotFound(String),
     Unknown,
 }
 
@@ -286,13 +360,23 @@ pub struct Context<'a> {
 }
 
 /// Node<T: SymbolicNode>'s id has a corresponding symbol
-pub trait SymbolicNode: Debug + Clone {}
+pub trait SymbolicNode: Debug + Clone {
+    fn id(&self) -> usize;
+}
 // impl SymbolicNode for LetDeclaration {}
-impl SymbolicNode for FunctionDeclaration {}
-impl SymbolicNode for Path {}
+impl SymbolicNode for FunctionDeclaration {
+    fn id(&self) -> usize {
+        self.id
+    }
+}
+impl SymbolicNode for Path {
+    fn id(&self) -> usize {
+        self.id
+    }
+}
 
 impl<'a> Context<'a> {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Context {
             symtab: Symtab::new(),
             node_id_to_symbol: HashMap::new(),
@@ -300,10 +384,27 @@ impl<'a> Context<'a> {
             scope_counter: 0,
         }
     }
-    pub fn get_node_symbol(&self, node: &Node<impl SymbolicNode>) -> Symbol {
+    pub fn get_type(&self, scope: ScopeId, type_expr: &TypeExpr) -> Option<Type> {
+        match type_expr {
+            TypeExpr::Unit => Some(Type::Unit),
+            TypeExpr::Identifier(name) => Some(
+                self.symtab
+                    .types
+                    .get_value_in_scope_chain(&self.symtab.parents, scope, name)?
+                    .value
+                    .clone(),
+            ),
+            TypeExpr::Tuple(_) => todo!(),
+            TypeExpr::Untyped => panic!(),
+        }
+    }
+    pub fn get_new_symbol(&mut self) -> Symbol {
+        self.symtab.get_new_symbol()
+    }
+    pub fn get_node_symbol(&self, node: &impl SymbolicNode) -> Symbol {
         return self
             .node_id_to_symbol
-            .get(&node.id)
+            .get(&node.id())
             .expect(&format!("{node:?} not there"))
             .clone();
     }
@@ -321,20 +422,48 @@ impl<'a> Context<'a> {
     pub fn get_scope_immut(&self, node_id: usize) -> Option<ScopeId> {
         self.scopes_by_node_id.get(&node_id).map(|e| *e)
     }
-    fn get_scope_from_node_id(&mut self, node_id: usize) -> ScopeId {
-        self.scopes_by_node_id
-            .get(&node_id)
-            .map(|e| *e)
-            .unwrap_or_else(|| {
-                let new_scope = self.get_new_scope();
-                self.scopes_by_node_id.insert(node_id, new_scope);
-                new_scope
-            })
+
+    /// Get's the first variable with the name in the scope chain
+    pub fn get_variable_symbol(&self, scope: ScopeId, name: &String) -> Option<Symbol> {
+        self.symtab
+            .variables
+            .get_name_in_scope_chain(&self.symtab.parents, scope, name)
+    }
+
+    /// Get's the variable's ty in the scope chain
+    pub fn get_variable_ty(&self, scope: ScopeId, name: &String) -> Option<Type> {
+        self.symtab
+            .variables
+            .get_value_in_scope_chain(&self.symtab.parents, scope, name)
+            .map(|e| e.ty.clone())
+    }
+
+    fn get_path_ty(&self, path: &Path) -> Option<Type> {
+        let scope = self.get_scope_from_node_id(path.id)?;
+        if path.path.len() == 1 {
+            Some(
+                self.symtab
+                    .variables
+                    .get_value_in_scope_chain(
+                        &self.symtab.parents,
+                        scope,
+                        &path.path[0].to_string(),
+                    )?
+                    .ty
+                    .clone(),
+            )
+        } else {
+            todo!()
+        }
+    }
+
+    fn get_scope_from_node_id(&self, node_id: usize) -> Option<ScopeId> {
+        self.scopes_by_node_id.get(&node_id).map(|e| *e)
     }
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
-pub struct ScopeId(usize);
+pub struct ScopeId(pub usize);
 
 impl Display for ScopeId {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {

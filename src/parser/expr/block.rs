@@ -1,11 +1,11 @@
 use crate::parser::{
-    ast::{Block, Node, Statement},
+    ast::{Block, Statement},
     lexer::Token,
     ParseError, Parser, Sources,
 };
 
-impl<T: Sources> Parser<'_, T> {
-    pub(in crate::parser) fn parse_block(&mut self) -> Result<Node<Block>, ParseError> {
+impl Parser<'_> {
+    pub(in crate::parser) fn parse_block(&mut self) -> Result<Block, ParseError> {
         self.expect_token(Token::LBrace)?;
         let mut statements = Vec::new();
         let mut does_return = false;
@@ -82,9 +82,10 @@ impl<T: Sources> Parser<'_, T> {
             }
         }
         self.expect_token(Token::RBrace)?;
-        Ok(self.node(Block {
+        Ok(Block {
+            id: self.node_id(),
             statements,
             does_return,
-        }))
+        })
     }
 }

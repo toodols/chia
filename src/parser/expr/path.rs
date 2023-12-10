@@ -1,11 +1,11 @@
 use crate::parser::{
-    ast::{Node, Path, SymbolName},
+    ast::{Path, Span},
     lexer::Token,
-    ParseError, Parser, Sources,
+    ParseError, Parser,
 };
 
-impl<T: Sources> Parser<'_, T> {
-    pub(in crate::parser) fn parse_expr_path(&mut self) -> Result<Node<Path>, ParseError> {
+impl Parser<'_> {
+    pub(in crate::parser) fn parse_expr_path(&mut self) -> Result<Path, ParseError> {
         let mut path = Vec::new();
         if self.peek_token() == Some(Token::Identifier) {
             self.next_token();
@@ -16,6 +16,12 @@ impl<T: Sources> Parser<'_, T> {
             self.expect_token(Token::Identifier)?;
             path.push(self.slice_token().to_owned());
         }
-        Ok(self.node(Path(path.into_iter().map(SymbolName::External).collect())))
+        Ok(Path {
+            path: path
+                .into_iter()
+                .map(|s| Span::from(s))
+                .collect::<Vec<Span>>(),
+            id: self.node_id(),
+        })
     }
 }

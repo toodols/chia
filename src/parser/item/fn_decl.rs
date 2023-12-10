@@ -1,10 +1,10 @@
 use crate::parser::{
-    ast::{FunctionDeclaration, Node, Parameters, TypeExpr},
+    ast::{FunctionDeclaration, Parameters, TypeExpr},
     lexer::Token,
-    ParseError, Parser, Sources, SymbolName,
+    ParseError, Parser,
 };
 
-impl<T: Sources> Parser<'_, T> {
+impl Parser<'_> {
     fn parse_fn_params(&mut self) -> Result<Parameters, ParseError> {
         self.expect_token(Token::LParen)?;
         let mut params = Parameters::new();
@@ -21,7 +21,7 @@ impl<T: Sources> Parser<'_, T> {
         Ok(params)
     }
 
-    pub(super) fn parse_fn_declaration(&mut self) -> Result<Node<FunctionDeclaration>, ParseError> {
+    pub(super) fn parse_fn_declaration(&mut self) -> Result<FunctionDeclaration, ParseError> {
         self.expect_token(Token::Fn)?;
         let name = self.expect_token(Token::Identifier)?.to_owned();
 
@@ -35,24 +35,24 @@ impl<T: Sources> Parser<'_, T> {
                 return Err(ParseError::Unknown);
             }
         };
-        let parameters = self.node(parameters);
         let return_type = match self.peek_token() {
             Some(Token::Arrow) => {
                 self.expect_token(Token::Arrow)?;
                 self.parse_type()?
             }
-            Some(Token::LBrace) => self.node(TypeExpr::Unit),
+            Some(Token::LBrace) => TypeExpr::Unit,
             _ => {
                 return Err(ParseError::Unknown);
             }
         };
 
         let body = self.parse_block()?;
-        Ok(self.node(FunctionDeclaration {
-            name: SymbolName::External(name),
+        Ok(FunctionDeclaration {
+            id: self.node_id(),
+            span: name.into(),
             parameters,
             body,
             return_type,
-        }))
+        })
     }
 }

@@ -19,7 +19,7 @@ struct Tokens<'a> {
 }
 
 impl<'a> Tokens<'a> {
-    fn new(source: &str) -> Tokens<'_> {
+    fn new<'s>(source: &'s str) -> Tokens<'s> {
         let tokens = Token::lexer(source);
         Tokens {
             tokens,
@@ -102,21 +102,28 @@ pub trait Sources {
     fn child(&self, path: &std::path::Path, child: &str) -> Option<&std::path::Path>;
 }
 
-pub(crate) struct Parser<'a, T: Sources> {
+impl Sources for &str {
+    fn get(&self, path: &std::path::Path) -> Option<&str> {
+        if path == std::path::Path::new("") {
+            Some(self)
+        } else {
+            None
+        }
+    }
+    fn child(&self, path: &std::path::Path, child: &str) -> Option<&std::path::Path> {
+        None
+    }
+}
+
+pub(crate) struct Parser<'a> {
     node_id_counter: usize,
     tokens: Tokens<'a>,
     path: &'a std::path::Path,
-    sources: &'a T,
+    sources: Arc<&'a dyn Sources>,
 }
 
-impl<'a, T: Sources> Parser<'a, T> {
+impl<'a> Parser<'a> {
     /// Constructs a unique node from a given value
-    fn node<Innner: Debug + Clone>(&mut self, value: Innner) -> Node<Innner> {
-        Node {
-            inner: value,
-            id: self.node_id(),
-        }
-    }
     fn next_token(&mut self) -> Option<Token> {
         self.tokens.next_token_with_pos().map(|(t, _)| t)
     }
@@ -136,26 +143,39 @@ impl<'a, T: Sources> Parser<'a, T> {
         self.tokens.expect_token(token)
     }
 
-    pub(crate) fn new<'s, S: Sources>(sources: &'s S) -> Parser<'s, S> {
+    pub(crate) fn new<'s, S: Sources>(sources: &'s S) -> Parser<'s> {
+        let sources: Arc<&dyn Sources> = Arc::new(sources);
         let s = sources.get(std::path::Path::new("")).unwrap();
         Parser {
             node_id_counter: 0,
             path: std::path::Path::new(""),
             tokens: Tokens::new(s),
-            sources: &sources,
+            sources,
         }
     }
-    fn parse_child(&self, name: &str) -> Result<Node<Program>, ParseError> {
+    fn parse_child(&self, name: &str) -> Result<Program, ParseError> {
         let child_path = self
             .sources
             .child(self.path, name)
             .ok_or_else(|| ParseError::Unknown)?;
+
+        // trait T {
+
+        // }
+        // struct S {
+        //     s: Arc<dyn T>
+        // }
+        // fn f(&S) {
+
+        // }
+
         let mut parser = Parser {
             node_id_counter: 0,
             path: child_path,
             sources: self.sources.clone(),
             tokens: Tokens::new(self.sources.get(child_path).unwrap()),
         };
+
         parser.parse_program()
     }
     /// Gives a unique node id
@@ -166,7 +186,7 @@ impl<'a, T: Sources> Parser<'a, T> {
     }
 }
 
-impl<T: Sources> Parser<'_, T> {
+impl Parser<'_> {
     fn parse_fn_call_body(&mut self) -> Result<Vec<Expression>, ParseError> {
         self.expect_token(Token::LParen)?;
         let mut args = Vec::new();
@@ -197,7 +217,7 @@ impl<T: Sources> Parser<'_, T> {
         Ok(args)
     }
 
-    fn parse_let_declaration(&mut self) -> Result<Node<LetDeclaration>, ParseError> {
+    fn parse_let_declaration(&mut self) -> Result<LetDeclaration, ParseError> {
         self.expect_token(Token::Let)?;
         let pat = self.parse_pattern()?;
 
@@ -207,30 +227,51 @@ impl<T: Sources> Parser<'_, T> {
             if !value.terminating() {
                 self.expect_token(Token::Semicolon)?;
             }
-            Ok(self.node(LetDeclaration {
+            Ok(LetDeclaration {
                 pat,
                 value: Some(value),
-            }))
+                id: self.node_id(),
+            })
         } else {
             self.expect_token(Token::Semicolon)?;
-            Ok(self.node(LetDeclaration { pat, value: None }))
+            Ok(LetDeclaration {
+                pat,
+                value: None,
+                id: self.node_id(),
+            })
         }
     }
-
+    fn parse_ty_path(&mut self) -> Result<TyPath, ParseError> {
+        let mut path = Vec::new();
+        if self.peek_token() == Some(Token::Identifier) {
+            self.next_token();
+            path.push(self.slice_token().to_owned());
+        }
+        while self.peek_token() == Some(Token::Scope) {
+            self.next_token();
+            self.expect_token(Token::Identifier)?;
+            path.push(self.slice_token().to_owned());
+        }
+        Ok(TyPath {
+            path: path
+                .into_iter()
+                .map(|s| Span::from(s))
+                .collect::<Vec<Span>>(),
+            id: self.node_id(),
+        })
+    }
     fn parse_pattern(&mut self) -> Result<Pattern, ParseError> {
         let path = self.parse_expr_path()?;
         Ok(Pattern::Path(path))
     }
 
-    fn parse_type(&mut self) -> Result<Node<TypeExpr>, ParseError> {
+    fn parse_type(&mut self) -> Result<TypeExpr, ParseError> {
         match self.next_token_with_pos() {
-            Some((Token::Identifier, _)) => {
-                Ok(self.node(TypeExpr::Identifier(self.slice_token().to_owned())))
-            }
+            Some((Token::Identifier, _)) => Ok(TypeExpr::Identifier(self.slice_token().to_owned())),
             Some((Token::LParen, _)) => {
                 if self.peek_token() == Some(Token::RParen) {
                     self.next_token();
-                    return Ok(self.node(TypeExpr::Unit));
+                    return Ok(TypeExpr::Unit);
                 }
                 let mut types = Vec::new();
                 types.push(self.parse_type()?);
@@ -239,21 +280,20 @@ impl<T: Sources> Parser<'_, T> {
                     types.push(self.parse_type()?);
                 }
                 self.expect_token(Token::RParen)?;
-                Ok(self.node(TypeExpr::Tuple(types)))
+                Ok(TypeExpr::Tuple(types))
             }
             Some((t, pos)) => Err(ParseError::UnexpectedToken { token: t, at: pos }),
             None => Err(ParseError::UnexpectedEOF),
         }
     }
 
-    pub(crate) fn parse_program(&mut self) -> Result<Node<Program>, ParseError> {
+    pub(crate) fn parse_program(&mut self) -> Result<Program, ParseError> {
         let node_id = self.node_id();
         let mut items = Vec::new();
         while self.peek_token().is_some() {
             items.push(self.parse_item()?);
         }
-        println!("finished parsing");
-        Ok(self.node(Program { items }))
+        Ok(Program { items, id: node_id })
     }
 }
 // don't even bother trying to include macros in this shit language
@@ -314,18 +354,25 @@ impl<T: Sources> Parser<'_, T> {
 //     Ok(matched)
 // }
 
-pub fn parse<'a>(source: &'a str) -> Result<Node<Program>, ParseError> {
-    struct SingleSource<'a>(&'a str);
+pub fn parse<'a>(source: &'a str) -> Result<Program, ParseError> {
+    // struct SingleSource<'a>(&'a str);
 
-    impl<'a> Sources for SingleSource<'a> {
-        fn get(&self, path: &std::path::Path) -> Option<&str> {
-            None
-        }
-        fn child(&self, path: &std::path::Path, child: &str) -> Option<&std::path::Path> {
-            None
-        }
-    }
-    let binding = SingleSource(source);
-    let mut parser = Parser::<'a, SingleSource<'a>>::new(&binding);
+    // impl<'a> Sources for SingleSource<'a> {
+    //     fn get(&self, path: &std::path::Path) -> Option<&str> {
+    //         None
+    //     }
+    //     fn child(&self, path: &std::path::Path, child: &str) -> Option<&std::path::Path> {
+    //         None
+    //     }
+    // }
+    // let binding = SingleSource(source);
+    // let mut parser = Parser::<'a, SingleSource<'a>>::new(&binding);
+    let mut parser = Parser::new(&source);
     parser.parse_program()
+}
+
+#[test]
+fn test_block_is_expr() {
+    let mut parser = Parser::new(&"{}");
+    let program = parser.parse_expression().unwrap();
 }

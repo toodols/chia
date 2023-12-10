@@ -1,8 +1,14 @@
-mod helper;
+fn greeting(value: string) -> bool {
+    print("Cow says");
+    print(value);
+    true
+}
 
 fn main() {
-    let i = 2;
-    for i in 0..100 {
-        // print(i);
+    let x = 5;
+    for i in 1..x {
+        let x = "mooo";
+        let b = greeting(x);
+        print("yay!");
     }
 }

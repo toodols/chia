@@ -1,62 +1,80 @@
-use crate::parser::ast::{FunctionDeclaration, Node};
+use crate::parser::ast::FunctionDeclaration;
 
-use super::{typecheck_block, CompilerError, CompilerResult, Context, NodeRef, State, Symbol};
+use super::{
+    typecheck_block, CompilerError, CompilerResult, Context, NodeRef, State, Symbol,
+    VarSymbolDetails,
+};
 
 pub fn typecheck_function_declaration<'nodes, 'ctx>(
     ctx: &'ctx mut Context<'nodes>,
     state: State,
-    Node { inner, .. }: &'nodes Node<FunctionDeclaration>,
-) -> CompilerResult<&'ctx mut Context<'nodes>> {
-    let scope = state.scope;
-    let body_scope = ctx.get_scope_from_node_id(inner.body.id);
+    fn_decl: &'nodes FunctionDeclaration,
+) -> CompilerResult<()> {
+    let fn_scope = state.scope;
+    let param_scope = ctx.get_new_scope();
+    // ctx.scopes_by_node_id.insert(fn_decl.body.id, body_scope);
 
-    // parent is inserted again in typecheck_block with the same arguments
     /*
-    Current implementation. `p` and `T` and `R` is considered to be part of scope 1
+    Implementation 1: `p` and `T` and `R` is considered to be part of scope 1
     <scope 0>
     <scope 1> fn a( p: T ) -> R
     <scope 1> {
         ...
     }
 
-    Alternate implementation. Possible by assigning a node_id for `FnDecl` and using that as the parent of `Block`
-    But largely redundant.
+    Implementation 2:
+    Currently being used because dumbass me made block expr create a new scope unconditionally
     <scope 0>
     <scope 1> fn a( p: T ) -> R
     <scope 2> {
         ...
     }
      */
-    ctx.symtab.parents.insert(body_scope, scope);
-    for (pat, type_expr) in inner.parameters.inner.0.iter() {
-        ctx.symtab.variables.insert(
-            Symbol {
-                name: pat.as_path_symbol(),
-                scope: body_scope,
-                ..Default::default()
-            },
-            (
-                ctx.symtab.get_type(scope, &type_expr.inner),
-                NodeRef::FunctionDeclaration(inner),
-            ),
-        );
+    ctx.symtab.parents.insert(param_scope, fn_scope);
+    for (pat, type_expr) in fn_decl.parameters.0.iter() {
+        for (path, ty) in pat
+            .decompose(
+                ctx,
+                // type retrieval use fn_scope instead of param_scope because you can't define types in param_scope
+                &ctx.get_type(fn_scope, type_expr)
+                    .ok_or(CompilerError::TypeNotFound(format!("{:?}", type_expr)))?,
+            )?
+            .into_iter()
+        {
+            assert!(path.path.len() == 1, "path length > 1");
+            let symbol = ctx.get_new_symbol();
+            ctx.symtab.variables.insert(
+                symbol,
+                path.last(),
+                param_scope,
+                VarSymbolDetails {
+                    ty,
+                    node_ref: Some(NodeRef::FunctionDeclaration(fn_decl)),
+                },
+            );
+        }
     }
-    let return_type = ctx.symtab.get_type(scope, &inner.return_type.inner);
+    let return_type =
+        ctx.get_type(fn_scope, &fn_decl.return_type)
+            .ok_or(CompilerError::TypeNotFound(format!(
+                "{:?}",
+                fn_decl.return_type
+            )))?;
     let block_output = typecheck_block(
         ctx,
         State {
-            scope,
+            scope: param_scope,
             expect_return_type: Some(return_type.clone()),
             ..Default::default()
         },
-        &inner.body,
+        &fn_decl.body,
     )?;
     if block_output.ty.is_subtype(&return_type) {
-        Ok(ctx)
+        Ok(())
     } else {
         Err(CompilerError::AnyError(format!(
             "Function {:?} has return type {:?} but returns {:?}",
-            inner.name, return_type, block_output.ty
+            fn_decl.span, return_type, block_output.ty
         )))
     }
 }

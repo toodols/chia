@@ -1,13 +1,13 @@
 use crate::parser::{
-    ast::{Item, SymbolName, TupleStructDeclaration},
+    ast::{Item, TupleStructDeclaration},
     lexer::Token,
     ParseError, Parser, Sources,
 };
 
-impl<T: Sources> Parser<'_, T> {
+impl Parser<'_> {
     pub(super) fn parse_struct_declaration(&mut self) -> Result<Item, ParseError> {
         self.expect_token(Token::Struct)?;
-        let name = SymbolName::External(self.expect_token(Token::Identifier)?.to_owned());
+        let name = self.expect_token(Token::Identifier)?.to_owned();
         if self.peek_token() == Some(Token::LBrace) {
             todo!()
         } else if self.peek_token() == Some(Token::LParen) {
@@ -20,9 +20,10 @@ impl<T: Sources> Parser<'_, T> {
             }
             self.expect_token(Token::RParen)?;
             self.expect_token(Token::Semicolon)?;
-            Ok(Item::TupleStructDeclaration(
-                self.node(TupleStructDeclaration { name, fields }),
-            ))
+            Ok(Item::TupleStructDeclaration(TupleStructDeclaration {
+                name,
+                fields,
+            }))
         } else {
             Err(ParseError::Unknown)
         }

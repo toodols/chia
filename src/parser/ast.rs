@@ -1,38 +1,39 @@
 use super::lexer::Token;
 use std::fmt::Debug;
 
-/// Each node represents a section of code
 #[derive(Debug, Clone)]
-pub struct Node<T: Debug + Clone> {
-    pub inner: T,
+pub struct Span(String);
+impl ToString for Span {
+    fn to_string(&self) -> String {
+        self.0.clone()
+    }
+}
+impl From<String> for Span {
+    fn from(s: String) -> Self {
+        Self(s)
+    }
+}
+impl From<&str> for Span {
+    fn from(s: &str) -> Self {
+        Self(s.to_owned())
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Path {
+    pub path: Vec<Span>,
     pub id: usize,
-    // span: Span,
 }
-
-#[derive(Clone, PartialEq, Eq, Hash)]
-pub enum SymbolName {
-    External(String),
-    Internal(usize),
-}
-
-impl SymbolName {
-    pub fn ident(&self) -> String {
-        match self {
-            SymbolName::External(s) => s.clone(),
-            SymbolName::Internal(s) => format!("_{s}"),
-        }
+impl Path {
+    pub fn last(&self) -> String {
+        self.path.last().unwrap().to_string()
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct Path(pub Vec<SymbolName>);
-// Paths look like "std::mem::drop"
-// Right now they are just "drop"
-impl Path {
-    // temporary solution so i don't have to deal with actual paths.
-    pub fn symbol(&self) -> &SymbolName {
-        &self.0[0]
-    }
+pub struct TyPath {
+    pub path: Vec<Span>,
+    pub id: usize,
 }
 
 // Patterns look like "Some(s)"
@@ -40,25 +41,26 @@ impl Path {
 #[derive(Clone, Debug)]
 #[non_exhaustive]
 pub enum Pattern {
-    Path(Node<Path>),
+    Path(Path),
+    Tuple(Vec<Pattern>),
 }
 
-impl Pattern {
-    pub fn as_path_symbol(&self) -> SymbolName {
-        match self {
-            Pattern::Path(s) => SymbolName::External(s.inner.symbol().ident()),
-            _ => panic!(),
-        }
-    }
-}
+// impl Pattern {
+//     fn as_path_symbol(&self) -> &TyPath {
+//         match self {
+//             Pattern::Path(path) => path.symbol(),
+//         }
+//     }
+// }
 
 #[derive(Debug, Clone)]
 pub struct Program {
+    pub id: usize,
     pub items: Vec<Item>,
 }
 
 #[derive(Debug, Clone)]
-pub struct Parameters(pub Vec<(Pattern, Node<TypeExpr>)>);
+pub struct Parameters(pub Vec<(Pattern, TypeExpr)>);
 
 impl Parameters {
     pub fn new() -> Self {
@@ -68,24 +70,25 @@ impl Parameters {
 
 #[derive(Debug, Clone)]
 pub struct FunctionDeclaration {
-    pub name: SymbolName,
-    pub parameters: Node<Parameters>,
-    pub body: Node<Block>,
-    pub return_type: Node<TypeExpr>,
+    pub id: usize,
+    pub span: Span,
+    pub parameters: Parameters,
+    pub body: Block,
+    pub return_type: TypeExpr,
 }
 
 #[derive(Debug, Clone)]
 pub enum Item {
-    FunctionDeclaration(Node<FunctionDeclaration>),
-    TupleStructDeclaration(Node<TupleStructDeclaration>),
-    StructDeclaration(Node<StructDeclaration>),
-    Mod(Node<Mod>),
+    FunctionDeclaration(FunctionDeclaration),
+    TupleStructDeclaration(TupleStructDeclaration),
+    StructDeclaration(StructDeclaration),
+    Mod(Mod),
 }
 
 #[derive(Debug, Clone)]
 pub struct Mod {
-    pub name: String,
-    pub body: Node<Program>,
+    pub span: Span,
+    pub body: Program,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -205,7 +208,7 @@ pub struct UnaryOperation {
 #[derive(Debug, Clone)]
 pub enum TypeExpr {
     Identifier(String),
-    Tuple(Vec<Node<TypeExpr>>),
+    Tuple(Vec<TypeExpr>),
     Unit,
     Untyped,
 }
@@ -226,11 +229,12 @@ pub struct BinaryOperation {
 pub enum Statement {
     Empty,
     Expression(Expression),
-    LetDeclaration(Node<LetDeclaration>),
+    LetDeclaration(LetDeclaration),
 }
 
 #[derive(Debug, Clone)]
 pub struct Block {
+    pub id: usize,
     pub statements: Vec<Statement>,
     /// Whether the last statement is to be returned
     pub does_return: bool,
@@ -238,14 +242,14 @@ pub struct Block {
 
 #[derive(Debug, Clone)]
 pub struct TupleStructDeclaration {
-    pub name: SymbolName,
-    pub fields: Vec<Node<TypeExpr>>,
+    pub name: String,
+    pub fields: Vec<TypeExpr>,
 }
 
 #[derive(Debug, Clone)]
 pub struct StructDeclaration {
-    pub name: SymbolName,
-    pub fields: Vec<(SymbolName, Node<TypeExpr>)>,
+    pub name: String,
+    pub fields: Vec<(String, TypeExpr)>,
 }
 
 #[derive(Debug, Clone)]
@@ -257,16 +261,16 @@ pub struct Index {
 #[derive(Clone)]
 pub enum Expression {
     Break(Box<Expression>),
-    Index(Node<Index>),
-    Block(Node<Block>),
-    BinaryOperation(Node<BinaryOperation>),
-    UnaryOperation(Node<UnaryOperation>),
-    Literal(Node<Literal>),
-    FunctionCall(Node<FunctionCall>),
-    IfExpression(Node<IfExpression>),
+    Index(Index),
+    Block(Block),
+    BinaryOperation(BinaryOperation),
+    UnaryOperation(UnaryOperation),
+    Literal(Literal),
+    FunctionCall(FunctionCall),
+    IfExpression(IfExpression),
     Return(Box<Expression>),
-    ForLoop(Node<ForLoop>),
-    Path(Node<Path>),
+    ForLoop(ForLoop),
+    Path(Path),
 }
 impl std::fmt::Debug for Expression {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -302,6 +306,7 @@ impl Expression {
 
 #[derive(Debug, Clone)]
 pub struct LetDeclaration {
+    pub id: usize,
     pub pat: Pattern,
     pub value: Option<Expression>,
 }
@@ -316,7 +321,7 @@ pub struct FunctionCall {
 pub struct ForLoop {
     pub pat: Pattern,
     pub iter: Box<Expression>,
-    pub body: Node<Block>,
+    pub body: Block,
 }
 
 #[derive(Debug, Clone)]

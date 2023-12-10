@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 
-use crate::parser::ast::{Node, Pattern, Statement};
+use crate::{
+    parser::ast::{Pattern, Statement},
+    typecheck::VarSymbolDetails,
+};
 
 use super::{
     typecheck_expression, CompilerError, CompilerResult, Context, NodeRef, ScopeId, State, Symbol,
@@ -40,12 +43,12 @@ pub fn typecheck_statement<'nodes, 'ctx>(
         Statement::Expression(ref expr) => {
             typecheck_expression(ctx, state, expr).map(|out| out.into())
         }
-        Statement::LetDeclaration(Node { inner, id }) => {
-            let expr = match &inner.value {
+        Statement::LetDeclaration(let_decl) => {
+            let expr = match &let_decl.value {
                 Some(val) => val,
                 None => Err(CompilerError::AnyError(format!(
                     "{:?} must be initialized",
-                    inner.pat.as_path_symbol()
+                    let_decl.pat
                 )))?,
             };
 
@@ -60,52 +63,44 @@ pub fn typecheck_statement<'nodes, 'ctx>(
 
             let mut shadowed = None;
 
-            for (path_id, ty) in inner.pat.decompose(&ty)? {
-                let symbol = Symbol {
-                    name: inner.pat.as_path_symbol(),
-                    scope: state.scope,
-                    ..Default::default()
-                };
-                ctx.node_id_to_symbol.insert(path_id, symbol.clone());
-                // does the symbol already exist in the current scope?
-                match (shadowed, ctx.symtab.variables.get(&symbol)) {
+            for (path, ty) in let_decl.pat.decompose(ctx, &ty)? {
+                assert!(path.path.len() == 1, "Cannot define variable by path");
+
+                let symbol = ctx.get_new_symbol();
+                ctx.node_id_to_symbol.insert(path.id, symbol);
+
+                // does the name already exist in the current scope?
+                let scope_to_insert_in = match (
+                    shadowed,
+                    ctx.symtab.variables.get_name_in_scope_chain(
+                        &ctx.symtab.parents,
+                        state.scope,
+                        &path.last(),
+                    ),
+                ) {
                     // add a new scope and continue from there
                     (None, Some(_)) => {
-                        let new_scope = ctx.get_scope_from_node_id(*id);
+                        let new_scope = ctx.get_new_scope();
                         ctx.symtab.parents.insert(new_scope, state.scope);
                         shadowed = Some(new_scope);
-                        let Symbol { name, .. } = symbol;
-                        let symbol = Symbol {
-                            name,
-                            scope: new_scope,
-                            ..Default::default()
-                        };
-                        println!("insert {path_id}");
-                        ctx.node_id_to_symbol.insert(path_id, symbol.clone());
-                        ctx.symtab
-                            .variables
-                            .insert(symbol, (ty, NodeRef::LetDeclaration(inner)));
+                        new_scope
                     }
-                    (Some(new_scope), Some(_)) => {
-                        let Symbol { name, .. } = symbol;
-                        let symbol = Symbol {
-                            name,
-                            scope: new_scope,
-                            ..Default::default()
-                        };
-                        println!("insert {path_id}");
-                        ctx.node_id_to_symbol.insert(path_id, symbol.clone());
-                        ctx.symtab
-                            .variables
-                            .insert(symbol, (ty, NodeRef::LetDeclaration(inner)));
-                    }
-                    // add variable to scope, do nothing
-                    (_, None) => {
-                        ctx.symtab
-                            .variables
-                            .insert(symbol, (ty, NodeRef::LetDeclaration(inner)));
-                    }
+                    // already shadowed; doesn't matter
+                    (Some(new_scope), _) => new_scope,
+
+                    // No conflict -> insert into current scope
+                    (None, None) => state.scope,
                 };
+
+                ctx.symtab.variables.insert(
+                    symbol,
+                    path.last(),
+                    scope_to_insert_in,
+                    VarSymbolDetails {
+                        ty,
+                        node_ref: Some(NodeRef::LetDeclaration(let_decl)),
+                    },
+                );
             }
 
             Ok(TckStmtOutput {

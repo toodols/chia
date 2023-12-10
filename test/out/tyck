@@ -1,52 +1,361 @@
 Context {
     symtab: Symtab {
-        variables: {
-            main@1: (
-                Function(
-                    [],
-                    Unit,
+        variables: Namespace {
+            scopes: {
+                ScopeId(
+                    1,
+                ): {
+                    "main": Symbol(
+                        5,
+                    ),
+                    "greeting": Symbol(
+                        4,
+                    ),
+                },
+                ScopeId(
+                    0,
+                ): {
+                    "print": Symbol(
+                        3,
+                    ),
+                },
+                ScopeId(
+                    2,
+                ): {
+                    "value": Symbol(
+                        6,
+                    ),
+                },
+                ScopeId(
+                    8,
+                ): {
+                    "b": Symbol(
+                        10,
+                    ),
+                    "x": Symbol(
+                        9,
+                    ),
+                },
+                ScopeId(
+                    5,
+                ): {
+                    "x": Symbol(
+                        7,
+                    ),
+                },
+                ScopeId(
+                    6,
+                ): {
+                    "i": Symbol(
+                        8,
+                    ),
+                },
+            },
+            names: {
+                Symbol(
+                    9,
+                ): (
+                    "x",
+                    ScopeId(
+                        8,
+                    ),
                 ),
-                FunctionDeclaration("main"),
-            ),
-            i@3: (
-                Number,
-                ForLoop("i"),
-            ),
-            i@2: (
-                Number,
-                LetDeclaration("i"),
-            ),
+                Symbol(
+                    4,
+                ): (
+                    "greeting",
+                    ScopeId(
+                        1,
+                    ),
+                ),
+                Symbol(
+                    7,
+                ): (
+                    "x",
+                    ScopeId(
+                        5,
+                    ),
+                ),
+                Symbol(
+                    6,
+                ): (
+                    "value",
+                    ScopeId(
+                        2,
+                    ),
+                ),
+                Symbol(
+                    3,
+                ): (
+                    "print",
+                    ScopeId(
+                        0,
+                    ),
+                ),
+                Symbol(
+                    8,
+                ): (
+                    "i",
+                    ScopeId(
+                        6,
+                    ),
+                ),
+                Symbol(
+                    5,
+                ): (
+                    "main",
+                    ScopeId(
+                        1,
+                    ),
+                ),
+                Symbol(
+                    10,
+                ): (
+                    "b",
+                    ScopeId(
+                        8,
+                    ),
+                ),
+            },
+            values: {
+                Symbol(
+                    3,
+                ): VarSymbolDetails {
+                    ty: Function(
+                        [
+                            String,
+                        ],
+                        Unit,
+                    ),
+                    node_ref: None,
+                },
+                Symbol(
+                    5,
+                ): VarSymbolDetails {
+                    ty: Function(
+                        [],
+                        Unit,
+                    ),
+                    node_ref: Some(
+                        FunctionDeclaration(Span("main")),
+                    ),
+                },
+                Symbol(
+                    6,
+                ): VarSymbolDetails {
+                    ty: String,
+                    node_ref: Some(
+                        FunctionDeclaration(Span("greeting")),
+                    ),
+                },
+                Symbol(
+                    4,
+                ): VarSymbolDetails {
+                    ty: Function(
+                        [
+                            String,
+                        ],
+                        Boolean,
+                    ),
+                    node_ref: Some(
+                        FunctionDeclaration(Span("greeting")),
+                    ),
+                },
+                Symbol(
+                    7,
+                ): VarSymbolDetails {
+                    ty: Number,
+                    node_ref: Some(
+                        LetDeclaration(Path(Path { path: [Span("x")], id: 9 })),
+                    ),
+                },
+                Symbol(
+                    10,
+                ): VarSymbolDetails {
+                    ty: Boolean,
+                    node_ref: Some(
+                        LetDeclaration(Path(Path { path: [Span("b")], id: 16 })),
+                    ),
+                },
+                Symbol(
+                    8,
+                ): VarSymbolDetails {
+                    ty: Number,
+                    node_ref: Some(
+                        ForLoop(Path(Path { path: [Span("i")], id: 11 })),
+                    ),
+                },
+                Symbol(
+                    9,
+                ): VarSymbolDetails {
+                    ty: String,
+                    node_ref: Some(
+                        LetDeclaration(Path(Path { path: [Span("x")], id: 14 })),
+                    ),
+                },
+            },
         },
-        types: {},
-        structs: {},
+        types: Namespace {
+            scopes: {
+                ScopeId(
+                    0,
+                ): {
+                    "string": Symbol(
+                        2,
+                    ),
+                    "number": Symbol(
+                        0,
+                    ),
+                    "bool": Symbol(
+                        1,
+                    ),
+                },
+            },
+            names: {
+                Symbol(
+                    2,
+                ): (
+                    "string",
+                    ScopeId(
+                        0,
+                    ),
+                ),
+                Symbol(
+                    1,
+                ): (
+                    "bool",
+                    ScopeId(
+                        0,
+                    ),
+                ),
+                Symbol(
+                    0,
+                ): (
+                    "number",
+                    ScopeId(
+                        0,
+                    ),
+                ),
+            },
+            values: {
+                Symbol(
+                    1,
+                ): TySymbolDetails {
+                    value: Boolean,
+                    node_ref: None,
+                },
+                Symbol(
+                    2,
+                ): TySymbolDetails {
+                    value: String,
+                    node_ref: None,
+                },
+                Symbol(
+                    0,
+                ): TySymbolDetails {
+                    value: Number,
+                    node_ref: None,
+                },
+            },
+        },
         parents: {
+            ScopeId(
+                3,
+            ): ScopeId(
+                2,
+            ),
+            ScopeId(
+                1,
+            ): ScopeId(
+                0,
+            ),
             ScopeId(
                 2,
             ): ScopeId(
                 1,
             ),
             ScopeId(
-                3,
+                6,
             ): ScopeId(
-                2,
+                5,
+            ),
+            ScopeId(
+                7,
+            ): ScopeId(
+                6,
+            ),
+            ScopeId(
+                4,
+            ): ScopeId(
+                1,
+            ),
+            ScopeId(
+                5,
+            ): ScopeId(
+                4,
+            ),
+            ScopeId(
+                8,
+            ): ScopeId(
+                7,
             ),
         },
+        symbol_counter: 11,
     },
     node_id_to_symbol: {
-        5: i@2,
-        16: main@1,
-        8: i@3,
-    },
-    scopes_by_node_id: {
-        13: ScopeId(
+        18: Symbol(
+            9,
+        ),
+        7: Symbol(
+            4,
+        ),
+        23: Symbol(
+            5,
+        ),
+        5: Symbol(
+            6,
+        ),
+        3: Symbol(
             3,
         ),
-        17: ScopeId(
-            1,
+        11: Symbol(
+            8,
         ),
-        15: ScopeId(
-            2,
+        12: Symbol(
+            7,
+        ),
+        9: Symbol(
+            7,
+        ),
+        14: Symbol(
+            9,
+        ),
+        17: Symbol(
+            4,
+        ),
+        16: Symbol(
+            10,
+        ),
+        4: Symbol(
+            3,
+        ),
+        20: Symbol(
+            3,
         ),
     },
-    scope_counter: 4,
+    scopes_by_node_id: {
+        0: ScopeId(
+            1,
+        ),
+        21: ScopeId(
+            7,
+        ),
+        6: ScopeId(
+            3,
+        ),
+        22: ScopeId(
+            5,
+        ),
+    },
+    scope_counter: 9,
 }

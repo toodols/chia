@@ -1,6 +1,9 @@
 use std::{collections::HashMap, path::Path};
 
-use crate::parser::Sources;
+use crate::{
+    parser::Sources,
+    typecheck::{Context, Type},
+};
 
 pub mod parser;
 pub mod targets;
@@ -33,12 +36,16 @@ fn test() {
             .map(|o| o.path())
         }
     }
-    let mut parser = parser::Parser::<'_, Dir<'_>>::new(&TEST_SRC);
+    let mut parser = parser::Parser::new(&TEST_SRC);
     let program = parser.parse_program().unwrap();
-
     std::fs::write("test/out/ast", format!("{:#?}", program)).unwrap();
-    let e = typecheck::typecheck_program(&program).unwrap();
-    std::fs::write("test/out/tyck", format!("{:#?}", e)).unwrap();
-    let out = targets::lua(&program, &e);
+    let mut ctx = Context::new();
+    ctx.symtab.insert_global_var(
+        "print",
+        Type::Function(vec![Type::String], Box::new(Type::Unit)),
+    );
+    typecheck::typecheck_program(&mut ctx, &program).unwrap();
+    std::fs::write("test/out/tyck", format!("{:#?}", ctx)).unwrap();
+    let out = targets::lua(&program, &ctx);
     std::fs::write("test/out/out.lua", out).unwrap();
 }

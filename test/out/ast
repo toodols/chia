@@ -1,159 +1,231 @@
-Node {
-    inner: Program {
-        items: [
-            Mod(
-                Node {
-                    inner: Mod {
-                        name: "helper",
-                        body: Node {
-                            inner: Program {
-                                items: [
-                                    FunctionDeclaration(
-                                        Node {
-                                            inner: FunctionDeclaration {
-                                                name: "print",
-                                                parameters: Node {
-                                                    inner: Parameters(
-                                                        [
-                                                            (
-                                                                Path(
-                                                                    Node {
-                                                                        inner: Path(
-                                                                            [
-                                                                                "n",
-                                                                            ],
-                                                                        ),
-                                                                        id: 1,
-                                                                    },
-                                                                ),
-                                                                Node {
-                                                                    inner: Identifier(
-                                                                        "number",
-                                                                    ),
-                                                                    id: 2,
-                                                                },
-                                                            ),
-                                                        ],
-                                                    ),
-                                                    id: 3,
-                                                },
-                                                body: Node {
-                                                    inner: Block {
-                                                        statements: [],
-                                                        does_return: false,
-                                                    },
-                                                    id: 6,
-                                                },
-                                                return_type: Node {
-                                                    inner: Unit,
-                                                    id: 4,
-                                                },
-                                            },
-                                            id: 7,
-                                        },
+Program {
+    id: 0,
+    items: [
+        FunctionDeclaration(
+            FunctionDeclaration {
+                id: 7,
+                span: Span(
+                    "greeting",
+                ),
+                parameters: Parameters(
+                    [
+                        (
+                            Path(
+                                Path {
+                                    path: [
+                                        Span(
+                                            "value",
+                                        ),
+                                    ],
+                                    id: 1,
+                                },
+                            ),
+                            Identifier(
+                                "string",
+                            ),
+                        ),
+                    ],
+                ),
+                body: Block {
+                    id: 6,
+                    statements: [
+                        Expression(
+                            FunctionCall {
+                                value: Path {
+                                    path: [
+                                        Span(
+                                            "print",
+                                        ),
+                                    ],
+                                    id: 3,
+                                },
+                                arguments: [
+                                    String(
+                                        "Cow says",
                                     ),
                                 ],
                             },
-                            id: 8,
-                        },
-                    },
-                    id: 1,
-                },
-            ),
-            FunctionDeclaration(
-                Node {
-                    inner: FunctionDeclaration {
-                        name: "main",
-                        parameters: Node {
-                            inner: Parameters(
-                                [],
+                        ),
+                        Expression(
+                            FunctionCall {
+                                value: Path {
+                                    path: [
+                                        Span(
+                                            "print",
+                                        ),
+                                    ],
+                                    id: 4,
+                                },
+                                arguments: [
+                                    Path {
+                                        path: [
+                                            Span(
+                                                "value",
+                                            ),
+                                        ],
+                                        id: 5,
+                                    },
+                                ],
+                            },
+                        ),
+                        Expression(
+                            Boolean(
+                                true,
                             ),
-                            id: 2,
-                        },
-                        body: Node {
-                            inner: Block {
-                                statements: [
-                                    LetDeclaration(
-                                        Node {
-                                            inner: LetDeclaration {
+                        ),
+                    ],
+                    does_return: false,
+                },
+                return_type: Identifier(
+                    "bool",
+                ),
+            },
+        ),
+        FunctionDeclaration(
+            FunctionDeclaration {
+                id: 23,
+                span: Span(
+                    "main",
+                ),
+                parameters: Parameters(
+                    [],
+                ),
+                body: Block {
+                    id: 22,
+                    statements: [
+                        LetDeclaration(
+                            LetDeclaration {
+                                id: 10,
+                                pat: Path(
+                                    Path {
+                                        path: [
+                                            Span(
+                                                "x",
+                                            ),
+                                        ],
+                                        id: 9,
+                                    },
+                                ),
+                                value: Some(
+                                    Number(
+                                        5,
+                                    ),
+                                ),
+                            },
+                        ),
+                        Expression(
+                            ForLoop {
+                                pat: Path(
+                                    Path {
+                                        path: [
+                                            Span(
+                                                "i",
+                                            ),
+                                        ],
+                                        id: 11,
+                                    },
+                                ),
+                                iter: BinaryOperation {
+                                    operator: Range,
+                                    left: Number(
+                                        1,
+                                    ),
+                                    right: Path {
+                                        path: [
+                                            Span(
+                                                "x",
+                                            ),
+                                        ],
+                                        id: 12,
+                                    },
+                                },
+                                body: Block {
+                                    id: 21,
+                                    statements: [
+                                        LetDeclaration(
+                                            LetDeclaration {
+                                                id: 15,
                                                 pat: Path(
-                                                    Node {
-                                                        inner: Path(
-                                                            [
-                                                                "i",
-                                                            ],
-                                                        ),
-                                                        id: 5,
+                                                    Path {
+                                                        path: [
+                                                            Span(
+                                                                "x",
+                                                            ),
+                                                        ],
+                                                        id: 14,
                                                     },
                                                 ),
                                                 value: Some(
-                                                    Node {
-                                                        inner: Number(
-                                                            2,
-                                                        ),
-                                                        id: 6,
-                                                    },
+                                                    String(
+                                                        "mooo",
+                                                    ),
                                                 ),
                                             },
-                                            id: 7,
-                                        },
-                                    ),
-                                    Expression(
-                                        Node {
-                                            inner: ForLoop {
+                                        ),
+                                        LetDeclaration(
+                                            LetDeclaration {
+                                                id: 19,
                                                 pat: Path(
-                                                    Node {
-                                                        inner: Path(
-                                                            [
-                                                                "i",
-                                                            ],
-                                                        ),
-                                                        id: 8,
+                                                    Path {
+                                                        path: [
+                                                            Span(
+                                                                "b",
+                                                            ),
+                                                        ],
+                                                        id: 16,
                                                     },
                                                 ),
-                                                iter: Node {
-                                                    inner: BinaryOperation {
-                                                        operator: Range,
-                                                        left: Node {
-                                                            inner: Number(
-                                                                0,
-                                                            ),
-                                                            id: 9,
+                                                value: Some(
+                                                    FunctionCall {
+                                                        value: Path {
+                                                            path: [
+                                                                Span(
+                                                                    "greeting",
+                                                                ),
+                                                            ],
+                                                            id: 17,
                                                         },
-                                                        right: Node {
-                                                            inner: Number(
-                                                                100,
-                                                            ),
-                                                            id: 10,
-                                                        },
+                                                        arguments: [
+                                                            Path {
+                                                                path: [
+                                                                    Span(
+                                                                        "x",
+                                                                    ),
+                                                                ],
+                                                                id: 18,
+                                                            },
+                                                        ],
                                                     },
-                                                    id: 11,
-                                                },
-                                                body: Node {
-                                                    inner: Block {
-                                                        statements: [],
-                                                        does_return: false,
-                                                    },
-                                                    id: 13,
-                                                },
+                                                ),
                                             },
-                                            id: 14,
-                                        },
-                                    ),
-                                ],
-                                does_return: false,
+                                        ),
+                                        Expression(
+                                            FunctionCall {
+                                                value: Path {
+                                                    path: [
+                                                        Span(
+                                                            "print",
+                                                        ),
+                                                    ],
+                                                    id: 20,
+                                                },
+                                                arguments: [
+                                                    String(
+                                                        "yay!",
+                                                    ),
+                                                ],
+                                            },
+                                        ),
+                                    ],
+                                    does_return: false,
+                                },
                             },
-                            id: 15,
-                        },
-                        return_type: Node {
-                            inner: Unit,
-                            id: 3,
-                        },
-                    },
-                    id: 16,
+                        ),
+                    ],
+                    does_return: false,
                 },
-            ),
-        ],
-    },
-    id: 17,
+                return_type: Unit,
+            },
+        ),
+    ],
 }

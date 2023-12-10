@@ -13,7 +13,7 @@ mod literal;
 mod loops;
 pub mod path;
 
-impl<T: Sources> Parser<'_, T> {
+impl Parser<'_> {
     // Basically expressions that don't rely on operators / precedence and are generally wrapped together nicely
     fn parse_atomic_expression(&mut self) -> Result<Expression, ParseError> {
         match self.peek_token_with_pos() {
@@ -33,7 +33,7 @@ impl<T: Sources> Parser<'_, T> {
                             let expr = self.parse_expression()?;
                             expr
                         }
-                        _ => Expression::Literal(self.node(Literal::Unit)),
+                        _ => Expression::Literal(Literal::Unit),
                     });
                     match t {
                         Token::Break => Ok(Expression::Break(inner)),
@@ -54,6 +54,10 @@ impl<T: Sources> Parser<'_, T> {
                     let expression = self.parse_expression()?;
                     self.expect_token(Token::RParen)?;
                     Ok(expression)
+                }
+                Token::LBrace => {
+                    let block = self.parse_block()?;
+                    Ok(Expression::Block(block))
                 }
                 _ => Err(ParseError::UnexpectedToken { token: t, at: pos }),
             },
@@ -98,11 +102,11 @@ impl<T: Sources> Parser<'_, T> {
             let right = expressions.remove(op_index);
             expressions.insert(
                 op_index,
-                Expression::BinaryOperation(self.node(BinaryOperation {
+                Expression::BinaryOperation(BinaryOperation {
                     operator: operators.remove(op_index),
                     left: Box::new(left),
                     right: Box::new(right),
-                })),
+                }),
             );
         }
         Ok(expressions.pop().unwrap())
@@ -114,18 +118,18 @@ impl<T: Sources> Parser<'_, T> {
             match self.peek_token() {
                 Some(Token::LParen) => {
                     let arguments = self.parse_fn_call_body()?;
-                    expr = Expression::FunctionCall(self.node(FunctionCall {
+                    expr = Expression::FunctionCall(FunctionCall {
                         value: Box::new(expr),
                         arguments,
-                    }));
+                    });
                 }
                 Some(Token::LBracket) => {
                     self.next_token();
                     let index_expr = self.parse_expression()?;
-                    expr = Expression::Index(self.node(Index {
+                    expr = Expression::Index(Index {
                         value: Box::new(expr),
                         index: Box::new(index_expr),
-                    }));
+                    });
                     self.expect_token(Token::RBracket)?;
                 }
                 Some(_) => break,
@@ -140,10 +144,10 @@ impl<T: Sources> Parser<'_, T> {
             Some(Token::Sub) => {
                 self.next_token();
                 let inner_expr = self.parse_expression_prefix()?;
-                Ok(Expression::UnaryOperation(self.node(UnaryOperation {
+                Ok(Expression::UnaryOperation(UnaryOperation {
                     operator: UnaryOperator::Negate,
                     value: Box::new(inner_expr),
-                })))
+                }))
             }
             Some(_) => self.parse_expression_postfix(),
             None => Err(ParseError::UnexpectedEOF),
