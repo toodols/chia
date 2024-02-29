@@ -42,15 +42,21 @@ pub fn typecheck_program<'ctx, 'nodes>(
                                     .0
                                     .iter()
                                     .map(|(_, ty_expr)| {
-                                        context.get_type(program_scope, &ty_expr).expect(
-                                            format!("parameter type not found {ty_expr:?}")
-                                                .as_str(),
-                                        )
+                                        context
+                                            .get_type(program_scope, &ty_expr)
+                                            .ok()
+                                            .flatten()
+                                            .expect(
+                                                format!("parameter type not found {ty_expr:?}")
+                                                    .as_str(),
+                                            )
                                     })
                                     .collect(),
                                 Box::new(
                                     context
                                         .get_type(program_scope, &fn_decl.return_type)
+                                        .ok()
+                                        .flatten()
                                         .expect("return type not found"),
                                 ),
                             ),
@@ -63,7 +69,6 @@ pub fn typecheck_program<'ctx, 'nodes>(
                 }
                 Item::Mod(another_program) => {
                     typecheck_program(context, &another_program.body)?;
-                    println!("idk what to do from here");
                 }
                 Item::StructDeclaration(decl) => {
                     todo!("Typecheck struct declaration")

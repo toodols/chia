@@ -1,8 +1,8 @@
 use crate::parser::ast::FunctionDeclaration;
 
 use super::{
-    typecheck_block, CompilerError, CompilerResult, Context, NodeRef, State, Symbol,
-    VarSymbolDetails,
+    expr::block, typecheck_block, CompilerError, CompilerResult, Context, NodeRef, State, Symbol,
+    Type, VarSymbolDetails,
 };
 
 pub fn typecheck_function_declaration<'nodes, 'ctx>(
@@ -33,10 +33,12 @@ pub fn typecheck_function_declaration<'nodes, 'ctx>(
     ctx.symtab.parents.insert(param_scope, fn_scope);
     for (pat, type_expr) in fn_decl.parameters.0.iter() {
         for (path, ty) in pat
-            .decompose(
+            .destructure(
                 ctx,
                 // type retrieval use fn_scope instead of param_scope because you can't define types in param_scope
                 &ctx.get_type(fn_scope, type_expr)
+                    .ok()
+                    .flatten()
                     .ok_or(CompilerError::TypeNotFound(format!("{:?}", type_expr)))?,
             )?
             .into_iter()
@@ -54,27 +56,34 @@ pub fn typecheck_function_declaration<'nodes, 'ctx>(
             );
         }
     }
-    let return_type =
-        ctx.get_type(fn_scope, &fn_decl.return_type)
-            .ok_or(CompilerError::TypeNotFound(format!(
-                "{:?}",
-                fn_decl.return_type
-            )))?;
+    let return_type = ctx
+        .get_type(fn_scope, &fn_decl.return_type)
+        .ok()
+        .flatten()
+        .ok_or(CompilerError::TypeNotFound(format!(
+            "{:?}",
+            fn_decl.return_type
+        )))?;
     let block_output = typecheck_block(
         ctx,
         State {
             scope: param_scope,
-            expect_return_type: Some(return_type.clone()),
             ..Default::default()
         },
         &fn_decl.body,
     )?;
-    if block_output.ty.is_subtype(&return_type) {
+
+    // Prioritizes `return_ty` over `expr_ty` of block.
+    if if block_output.return_ty == Type::Never {
+        block_output.expr_ty.is_subtype(&return_type)
+    } else {
+        block_output.return_ty.is_subtype(&return_type)
+    } {
         Ok(())
     } else {
         Err(CompilerError::AnyError(format!(
             "Function {:?} has return type {:?} but returns {:?}",
-            fn_decl.span, return_type, block_output.ty
+            fn_decl.span, return_type, block_output.expr_ty
         )))
     }
 }

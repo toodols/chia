@@ -110,7 +110,7 @@ fn transpile_expr(
                 _ => todo!(),
             }
             source.push_str(" do \n");
-            transpile_block(source, &for_loop.body, ctx).unwrap();
+            transpile_block(source, &for_loop.body, ctx, false).unwrap();
             source.push_str("end");
         }
         Expression::Path(path) => {
@@ -125,28 +125,29 @@ fn transpile_block(
     source: &mut String,
     inner @ Block { id, .. }: &Block,
     ctx: &Context<'_>,
+    is_function: bool,
 ) -> Result<(), ()> {
-    let mut scope = ctx.get_scope_immut(*id).unwrap();
+    let mut scope = ctx.get_scope_from_node_id(*id).unwrap();
 
     let len = inner.statements.len();
     for (i, stmt) in inner.statements.iter().enumerate() {
         match stmt {
             Statement::Empty => {}
             Statement::Expression(expr) => {
-                if i == len - 1 && inner.does_return {
+                if i == len - 1 && is_function && inner.does_return {
                     source.push_str("return ");
                 }
                 transpile_expr(source, scope, expr, ctx).unwrap()
             }
             Statement::LetDeclaration(inner) => {
                 let original_scope = scope;
-                if let Some(new_scope) = ctx.get_scope_immut(inner.id) {
+                if let Some(new_scope) = ctx.get_scope_from_node_id(inner.id) {
                     scope = new_scope;
                 }
 
                 match &inner.value {
                     Some(v) => {
-                        let symbols = inner.pat.decompose_symbols(ctx);
+                        let symbols = inner.pat.destructure_symbols(ctx);
                         if symbols.len() == 1 {
                             let (path, symbol) = &symbols[0];
                             source.push_str(&format!("local {} = ", get_name(ctx, symbol.clone())));
@@ -159,7 +160,7 @@ fn transpile_block(
                         }
                     }
                     None => {
-                        let symbols = inner.pat.decompose_symbols(ctx);
+                        let symbols = inner.pat.destructure_symbols(ctx);
                         for (_, symbol) in symbols {
                             source.push_str(&format!("local {}", get_name(ctx, symbol)));
                             source.push('\n')
@@ -196,7 +197,7 @@ pub fn lua(inner: &Program, ctx: &Context<'_>) -> String {
                     }
                 }
                 source.push_str(")\n");
-                transpile_block(&mut source, &fn_decl.body, ctx).unwrap();
+                transpile_block(&mut source, &fn_decl.body, ctx, true).unwrap();
                 source.push_str("\nend\n");
             }
             Item::TupleStructDeclaration(_) => todo!(),
@@ -207,7 +208,7 @@ pub fn lua(inner: &Program, ctx: &Context<'_>) -> String {
         }
     }
 
-    transpile_block(&mut source, &main.unwrap().body, ctx).unwrap();
+    transpile_block(&mut source, &main.unwrap().body, ctx, true).unwrap();
 
     source
 }

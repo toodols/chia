@@ -71,6 +71,9 @@ pub enum Type {
     Never,
 }
 impl Type {
+    /// Gives the union of types
+    /// Union is commutative, so if `let Some(ty) = a | b`, then `b | a = Some(ty)`
+    // Advanced unions like string | number is not supported and there is minimal reason to even support it
     fn union(&self, other: &Type) -> Result<Type, CompilerError> {
         match (self, other) {
             (Type::Never, _) => Ok(other.clone()),
@@ -93,7 +96,7 @@ impl Type {
 }
 
 impl Pattern {
-    pub fn decompose_symbols(&self, ctx: &Context) -> Vec<(&Path, Symbol)> {
+    pub fn destructure_symbols(&self, ctx: &Context) -> Vec<(&Path, Symbol)> {
         let mut symbols = Vec::new();
         match self {
             Pattern::Path(path) => {
@@ -103,9 +106,9 @@ impl Pattern {
         }
         symbols
     }
-    /// Decompose a pattern into its symbols against a type
+    /// Destructure a pattern into its symbols against a type
     /// assumes all paths are singles for now
-    pub fn decompose(&self, ctx: &Context, ty: &Type) -> CompilerResult<Vec<(&Path, Type)>> {
+    pub fn destructure(&self, ctx: &Context, ty: &Type) -> CompilerResult<Vec<(&Path, Type)>> {
         let mut symbols = HashMap::new();
 
         match self {
@@ -179,9 +182,15 @@ pub struct VarSymbolDetails<'a> {
     node_ref: Option<NodeRef<'a>>,
 }
 
+#[derive(Debug, Clone)]
+enum TypeOrModule {
+    Type(Type),
+    Module(()),
+}
+
 #[derive(Debug)]
 pub struct TySymbolDetails<'a> {
-    value: Type,
+    value: TypeOrModule,
     node_ref: Option<NodeRef<'a>>,
 }
 
@@ -263,7 +272,6 @@ impl<T: Debug, S: Debug + Eq + PartialEq + Hash + Copy> Namespace<T, S> {
 pub struct Symtab<'a> {
     pub variables: Namespace<VarSymbolDetails<'a>>,
     pub types: Namespace<TySymbolDetails<'a>>,
-
     pub parents: HashMap<ScopeId, ScopeId>,
     symbol_counter: usize,
 }
@@ -291,7 +299,7 @@ impl<'a> Symtab<'a> {
             name.to_owned(),
             ScopeId(0),
             TySymbolDetails {
-                value,
+                value: TypeOrModule::Type(value),
                 node_ref: None,
             },
         );
@@ -329,14 +337,17 @@ type CompilerResult<T> = Result<T, CompilerError>;
 #[derive(Debug)]
 pub struct TypecheckOutput {
     // The type of the expression
-    pub ty: Type,
-    // What value break exited with
-    pub exit_ty: Type,
+    pub expr_ty: Type,
+
+    // What value return exited with
+    pub return_ty: Type,
+
+    pub loop_ty: Type,
 }
 impl From<Type> for TypecheckOutput {
     fn from(ty: Type) -> Self {
         Self {
-            ty,
+            expr_ty: ty,
             ..Default::default()
         }
     }
@@ -345,8 +356,9 @@ impl From<Type> for TypecheckOutput {
 impl Default for TypecheckOutput {
     fn default() -> Self {
         Self {
-            ty: Type::Never,
-            exit_ty: Type::Never,
+            expr_ty: Type::Never,
+            return_ty: Type::Never,
+            loop_ty: Type::Never,
         }
     }
 }
@@ -384,16 +396,26 @@ impl<'a> Context<'a> {
             scope_counter: 0,
         }
     }
-    pub fn get_type(&self, scope: ScopeId, type_expr: &TypeExpr) -> Option<Type> {
+    pub fn get_type(&self, scope: ScopeId, type_expr: &TypeExpr) -> Result<Option<Type>, ()> {
         match type_expr {
-            TypeExpr::Unit => Some(Type::Unit),
-            TypeExpr::Identifier(name) => Some(
-                self.symtab
+            TypeExpr::Unit => Ok(Some(Type::Unit)),
+            TypeExpr::Identifier(name) => {
+                match self
+                    .symtab
                     .types
-                    .get_value_in_scope_chain(&self.symtab.parents, scope, name)?
-                    .value
-                    .clone(),
-            ),
+                    .get_value_in_scope_chain(&self.symtab.parents, scope, name)
+                {
+                    None => Ok(None),
+                    Some(TySymbolDetails {
+                        value: TypeOrModule::Module(module),
+                        ..
+                    }) => Err(()),
+                    Some(TySymbolDetails {
+                        value: TypeOrModule::Type(t),
+                        ..
+                    }) => Ok(Some(t.clone())),
+                }
+            }
             TypeExpr::Tuple(_) => todo!(),
             TypeExpr::Untyped => panic!(),
         }
@@ -419,18 +441,18 @@ impl<'a> Context<'a> {
         self.scope_counter += 1;
         return ScopeId(s);
     }
-    pub fn get_scope_immut(&self, node_id: usize) -> Option<ScopeId> {
+    pub fn get_scope_from_node_id(&self, node_id: usize) -> Option<ScopeId> {
         self.scopes_by_node_id.get(&node_id).map(|e| *e)
     }
 
-    /// Get's the first variable with the name in the scope chain
+    /// Gets the first variable with the name in the scope chain
     pub fn get_variable_symbol(&self, scope: ScopeId, name: &String) -> Option<Symbol> {
         self.symtab
             .variables
             .get_name_in_scope_chain(&self.symtab.parents, scope, name)
     }
 
-    /// Get's the variable's ty in the scope chain
+    /// Gets the variable's type in the scope chain
     pub fn get_variable_ty(&self, scope: ScopeId, name: &String) -> Option<Type> {
         self.symtab
             .variables
@@ -456,10 +478,6 @@ impl<'a> Context<'a> {
             todo!()
         }
     }
-
-    fn get_scope_from_node_id(&self, node_id: usize) -> Option<ScopeId> {
-        self.scopes_by_node_id.get(&node_id).map(|e| *e)
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
@@ -474,6 +492,5 @@ impl Display for ScopeId {
 #[derive(Clone, Debug, Default)]
 pub struct State {
     pub scope: ScopeId,
-    pub expect_return_type: Option<Type>,
     pub expect_break: bool,
 }

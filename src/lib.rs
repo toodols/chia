@@ -7,8 +7,8 @@ use crate::{
 
 pub mod parser;
 pub mod targets;
+pub mod transform;
 pub mod typecheck;
-// pub mod transform;
 
 #[test]
 fn test() {

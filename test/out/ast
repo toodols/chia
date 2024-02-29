@@ -3,7 +3,7 @@ Program {
     items: [
         FunctionDeclaration(
             FunctionDeclaration {
-                id: 7,
+                id: 6,
                 span: Span(
                     "greeting",
                 ),
@@ -27,7 +27,7 @@ Program {
                     ],
                 ),
                 body: Block {
-                    id: 6,
+                    id: 5,
                     statements: [
                         Expression(
                             FunctionCall {
@@ -37,7 +37,7 @@ Program {
                                             "print",
                                         ),
                                     ],
-                                    id: 3,
+                                    id: 2,
                                 },
                                 arguments: [
                                     String(
@@ -54,7 +54,7 @@ Program {
                                             "print",
                                         ),
                                     ],
-                                    id: 4,
+                                    id: 3,
                                 },
                                 arguments: [
                                     Path {
@@ -63,7 +63,7 @@ Program {
                                                 "value",
                                             ),
                                         ],
-                                        id: 5,
+                                        id: 4,
                                     },
                                 ],
                             },
@@ -74,7 +74,7 @@ Program {
                             ),
                         ),
                     ],
-                    does_return: false,
+                    does_return: true,
                 },
                 return_type: Identifier(
                     "bool",
@@ -83,7 +83,7 @@ Program {
         ),
         FunctionDeclaration(
             FunctionDeclaration {
-                id: 23,
+                id: 11,
                 span: Span(
                     "main",
                 ),
@@ -91,134 +91,38 @@ Program {
                     [],
                 ),
                 body: Block {
-                    id: 22,
+                    id: 10,
                     statements: [
                         LetDeclaration(
                             LetDeclaration {
-                                id: 10,
+                                id: 9,
                                 pat: Path(
                                     Path {
                                         path: [
                                             Span(
-                                                "x",
+                                                "a",
                                             ),
                                         ],
-                                        id: 9,
+                                        id: 7,
                                     },
                                 ),
                                 value: Some(
-                                    Number(
-                                        5,
-                                    ),
-                                ),
-                            },
-                        ),
-                        Expression(
-                            ForLoop {
-                                pat: Path(
-                                    Path {
-                                        path: [
-                                            Span(
-                                                "i",
+                                    FunctionCall {
+                                        value: Path {
+                                            path: [
+                                                Span(
+                                                    "greeting",
+                                                ),
+                                            ],
+                                            id: 8,
+                                        },
+                                        arguments: [
+                                            String(
+                                                "abc",
                                             ),
                                         ],
-                                        id: 11,
                                     },
                                 ),
-                                iter: BinaryOperation {
-                                    operator: Range,
-                                    left: Number(
-                                        1,
-                                    ),
-                                    right: Path {
-                                        path: [
-                                            Span(
-                                                "x",
-                                            ),
-                                        ],
-                                        id: 12,
-                                    },
-                                },
-                                body: Block {
-                                    id: 21,
-                                    statements: [
-                                        LetDeclaration(
-                                            LetDeclaration {
-                                                id: 15,
-                                                pat: Path(
-                                                    Path {
-                                                        path: [
-                                                            Span(
-                                                                "x",
-                                                            ),
-                                                        ],
-                                                        id: 14,
-                                                    },
-                                                ),
-                                                value: Some(
-                                                    String(
-                                                        "mooo",
-                                                    ),
-                                                ),
-                                            },
-                                        ),
-                                        LetDeclaration(
-                                            LetDeclaration {
-                                                id: 19,
-                                                pat: Path(
-                                                    Path {
-                                                        path: [
-                                                            Span(
-                                                                "b",
-                                                            ),
-                                                        ],
-                                                        id: 16,
-                                                    },
-                                                ),
-                                                value: Some(
-                                                    FunctionCall {
-                                                        value: Path {
-                                                            path: [
-                                                                Span(
-                                                                    "greeting",
-                                                                ),
-                                                            ],
-                                                            id: 17,
-                                                        },
-                                                        arguments: [
-                                                            Path {
-                                                                path: [
-                                                                    Span(
-                                                                        "x",
-                                                                    ),
-                                                                ],
-                                                                id: 18,
-                                                            },
-                                                        ],
-                                                    },
-                                                ),
-                                            },
-                                        ),
-                                        Expression(
-                                            FunctionCall {
-                                                value: Path {
-                                                    path: [
-                                                        Span(
-                                                            "print",
-                                                        ),
-                                                    ],
-                                                    id: 20,
-                                                },
-                                                arguments: [
-                                                    String(
-                                                        "yay!",
-                                                    ),
-                                                ],
-                                            },
-                                        ),
-                                    ],
-                                    does_return: false,
-                                },
                             },
                         ),
                     ],

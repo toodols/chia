@@ -33,6 +33,7 @@ impl From<Type> for TckStmtOutput {
     }
 }
 
+// Statements discard the .expr_ty field of the enclosed expr and replace it with unit
 pub fn typecheck_statement<'nodes, 'ctx>(
     ctx: &'ctx mut Context<'nodes>,
     state: State,
@@ -52,7 +53,11 @@ pub fn typecheck_statement<'nodes, 'ctx>(
                 )))?,
             };
 
-            let TypecheckOutput { ty, exit_ty } = typecheck_expression(ctx, state.clone(), &expr)?;
+            let TypecheckOutput {
+                expr_ty,
+                return_ty,
+                loop_ty,
+            } = typecheck_expression(ctx, state.clone(), &expr)?;
 
             // if ty == Type::Never {
             //     Err(CompilerError::AnyError(format!(
@@ -63,7 +68,7 @@ pub fn typecheck_statement<'nodes, 'ctx>(
 
             let mut shadowed = None;
 
-            for (path, ty) in let_decl.pat.decompose(ctx, &ty)? {
+            for (path, ty) in let_decl.pat.destructure(ctx, &expr_ty)? {
                 assert!(path.path.len() == 1, "Cannot define variable by path");
 
                 let symbol = ctx.get_new_symbol();
@@ -105,8 +110,9 @@ pub fn typecheck_statement<'nodes, 'ctx>(
 
             Ok(TckStmtOutput {
                 tck_output: TypecheckOutput {
-                    ty: Type::Unit,
-                    exit_ty,
+                    expr_ty: Type::Unit,
+                    return_ty,
+                    loop_ty,
                 },
                 shadowed,
             })

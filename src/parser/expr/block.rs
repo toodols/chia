@@ -4,12 +4,13 @@ use crate::parser::{
     ParseError, Parser, Sources,
 };
 
+// todo: move parse_block out of expr because it is used everywhere else
+
 impl Parser<'_> {
     pub(in crate::parser) fn parse_block(&mut self) -> Result<Block, ParseError> {
         self.expect_token(Token::LBrace)?;
         let mut statements = Vec::new();
         let mut does_return = false;
-        let node_id = self.node_id();
         struct IterRes {
             statement: Statement,
             can_cont: bool,
@@ -70,7 +71,8 @@ impl Parser<'_> {
                 }?;
 
                 statements.push(statement);
-                if !did_close && can_cont {
+                dbg!(did_close, can_cont);
+                if !did_close && !can_cont {
                     does_return = true;
                 }
 

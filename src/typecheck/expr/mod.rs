@@ -6,7 +6,7 @@ use crate::parser::ast::{BinaryOperation, BinaryOperator, Expression, Literal, P
 use block::typecheck_block;
 use for_loop::typecheck_for_loop;
 
-use super::{CompilerError, CompilerResult, Context, State, Symbol, Type, TypecheckOutput};
+use super::{CompilerError, CompilerResult, Context, State, Type, TypecheckOutput};
 
 pub fn typecheck_path<'nodes, 'ctx>(
     ctx: &'ctx mut Context<'nodes>,
@@ -46,10 +46,12 @@ pub fn typecheck_expression<'nodes, 'ctx>(
         },
         Expression::Path(path) => typecheck_path(ctx, state, path),
         Expression::BinaryOperation(inner) => {
-            let TypecheckOutput { ty: left_ty, .. } =
-                typecheck_expression(ctx, state.clone(), &inner.left)?;
-            let TypecheckOutput { ty: right_ty, .. } =
-                typecheck_expression(ctx, state, &inner.right)?;
+            let TypecheckOutput {
+                expr_ty: left_ty, ..
+            } = typecheck_expression(ctx, state.clone(), &inner.left)?;
+            let TypecheckOutput {
+                expr_ty: right_ty, ..
+            } = typecheck_expression(ctx, state, &inner.right)?;
             match inner {
                 BinaryOperation {
                     operator:
@@ -91,14 +93,16 @@ pub fn typecheck_expression<'nodes, 'ctx>(
         }
         Expression::FunctionCall(inner) => {
             let ty;
-            TypecheckOutput { ty, .. } =
+            TypecheckOutput { expr_ty: ty, .. } =
                 typecheck_expression(ctx, state.clone(), inner.value.as_ref())?;
             if let Type::Function(params, return_type) = ty {
                 let mut v = Vec::with_capacity(params.len());
                 for arg in inner.arguments.iter() {
                     let arg_ty;
-                    TypecheckOutput { ty: arg_ty, .. } =
-                        typecheck_expression(ctx, state.clone(), arg)?;
+                    TypecheckOutput {
+                        expr_ty: arg_ty,
+                        ..
+                    } = typecheck_expression(ctx, state.clone(), arg)?;
                     v.push(arg_ty);
                 }
                 if v == params {
@@ -117,36 +121,44 @@ pub fn typecheck_expression<'nodes, 'ctx>(
             }
         }
         Expression::ForLoop(expr) => typecheck_for_loop(ctx, state, expr),
+
         Expression::Break(expr) => {
+            // Break expressions:
+            // Inherit return_type
+            // Use expr_ty for loop_ty
+            // Inherit loop_ty
+
             if state.expect_break {
-                let TypecheckOutput { ty, exit_ty } = typecheck_expression(ctx, state, expr)?;
+                let TypecheckOutput {
+                    expr_ty,
+                    return_ty,
+                    loop_ty,
+                } = typecheck_expression(ctx, state, expr)?;
                 Ok(TypecheckOutput {
-                    ty: Type::Never,
-                    exit_ty: ty.union(&exit_ty)?,
+                    expr_ty: Type::Never,
+                    return_ty,
+                    loop_ty: expr_ty.union(&loop_ty)?,
                 })
             } else {
                 Err(CompilerError::AnyError("Break is not expected".to_owned()))
             }
         }
         Expression::Return(expr) => {
-            let TypecheckOutput { ty, .. } = typecheck_expression(ctx, state.clone(), expr)?;
-            if let Some(expect_ty) = state.expect_return_type {
-                if ty == expect_ty {
-                    Ok(TypecheckOutput {
-                        ty: Type::Never,
-                        exit_ty: Type::Never,
-                    })
-                } else {
-                    Err(CompilerError::MismatchedTypes(format!(
-                        "expected {:?}, got {:?}",
-                        expect_ty, ty
-                    )))
-                }
-            } else {
-                Err(CompilerError::AnyError(
-                    "Return is not expected".to_string(),
-                ))
-            }
+            // Return expressions:
+            // Inherit return_type
+            // Use expr_ty for return_type
+            // Inherit loop_ty (this part i am uncertain)
+
+            let TypecheckOutput {
+                expr_ty,
+                return_ty,
+                loop_ty,
+            } = typecheck_expression(ctx, state.clone(), expr)?;
+            Ok(TypecheckOutput {
+                expr_ty: Type::Never,
+                return_ty: expr_ty.union(&return_ty)?,
+                loop_ty,
+            })
         }
         Expression::Block(block) => typecheck_block(ctx, state, block),
         Expression::IfExpression(expr) => typecheck_if_expr(ctx, state, expr),

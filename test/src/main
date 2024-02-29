@@ -5,10 +5,5 @@ fn greeting(value: string) -> bool {
 }
 
 fn main() {
-    let x = 5;
-    for i in 1..x {
-        let x = "mooo";
-        let b = greeting(x);
-        print("yay!");
-    }
+    let a = greeting("abc");
 }
